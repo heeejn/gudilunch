@@ -370,6 +370,52 @@
     .w-submit:hover { background:var(--blue-dark); }
     .w-submit:active { transform:scale(0.98); }
 
+    /* ── 오늘의 추천 카드 ── */
+    .rec-card {
+      margin: 10px 10px 0;
+      background: linear-gradient(135deg, #EBF3FE 0%, #F0F9FF 100%);
+      border: 1.5px solid #B5D4F4;
+      border-radius: var(--r-lg);
+      padding: 14px 16px;
+      position: relative;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .rec-card::before {
+      content: '✨';
+      position: absolute; right: 14px; top: 10px;
+      font-size: 28px; opacity: 0.25;
+    }
+    .rec-label {
+      font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
+      color: var(--blue); text-transform: uppercase; margin-bottom: 6px;
+    }
+    .rec-title {
+      font-size: 14px; font-weight: 800; color: var(--text-primary);
+      letter-spacing: -0.4px; margin-bottom: 5px; line-height: 1.4;
+    }
+    .rec-title em { color: var(--blue); font-style: normal; }
+    .rec-reason {
+      font-size: 12px; color: var(--text-secondary);
+      letter-spacing: -0.2px; line-height: 1.5;
+    }
+    .rec-bottom {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-top: 10px;
+    }
+    .rec-refresh {
+      background: white; border: 1.5px solid var(--border);
+      border-radius: 999px; padding: 5px 12px;
+      font-family: inherit; font-size: 11px; font-weight: 700;
+      color: var(--text-secondary); cursor: pointer;
+      transition: all 0.15s; letter-spacing: -0.2px;
+    }
+    .rec-refresh:hover { border-color: var(--blue); color: var(--blue); }
+    .rec-loading {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; color: var(--text-tertiary);
+    }
+
     ::-webkit-scrollbar { width:4px; }
     ::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
 
@@ -383,7 +429,7 @@
 
 <header>
   <div class="logo-area">
-    <div class="logo-dot">🍱</div>
+    <div class="logo-dot" style="font-size:20px;">😋</div>
     <div>
       <div class="logo-title">구디 점메추</div>
       <div class="logo-sub">NHN KCP 주변 점심 메뉴 추천</div>
@@ -405,15 +451,42 @@
         </div>
         <button class="search-go" onclick="doSearch()">검색</button>
       </div>
-      <div class="chips">
-        <button class="chip on" data-cat="FD6" data-kw="false">전체 음식점</button>
-        <button class="chip" data-cat="CE7" data-kw="false">☕ 카페</button>
-        <button class="chip" data-cat="한식" data-kw="true">🍚 한식</button>
-        <button class="chip" data-cat="일식" data-kw="true">🍱 일식</button>
-        <button class="chip" data-cat="중식" data-kw="true">🥢 중식</button>
-        <button class="chip" data-cat="양식" data-kw="true">🍝 양식</button>
-        <button class="chip" data-cat="분식" data-kw="true">🍜 분식</button>
-        <button class="chip" data-cat="고기" data-kw="true">🥩 고기</button>
+      <div style="position:relative;display:flex;align-items:center;gap:4px;">
+        <button onclick="scrollChips(-1)" style="
+          flex-shrink:0;width:28px;height:28px;border-radius:50%;
+          background:white;border:1.5px solid var(--border);
+          font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+          box-shadow:var(--shadow-sm);transition:all 0.15s;
+        ">‹</button>
+        <div class="chips" id="chipsWrap">
+          <button class="chip on" data-cat="FD6" data-kw="false">전체 음식점</button>
+          <button class="chip" data-cat="CE7" data-kw="false">☕ 카페</button>
+          <button class="chip" data-cat="한식" data-kw="true">🍚 한식</button>
+          <button class="chip" data-cat="일식" data-kw="true">🍱 일식</button>
+          <button class="chip" data-cat="중식" data-kw="true">🥢 중식</button>
+          <button class="chip" data-cat="양식" data-kw="true">🍝 양식</button>
+          <button class="chip" data-cat="분식" data-kw="true">🍜 분식</button>
+          <button class="chip" data-cat="고기" data-kw="true">🥩 고기</button>
+        </div>
+        <button onclick="scrollChips(1)" style="
+          flex-shrink:0;width:28px;height:28px;border-radius:50%;
+          background:white;border:1.5px solid var(--border);
+          font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+          box-shadow:var(--shadow-sm);transition:all 0.15s;
+        ">›</button>
+      </div>
+    </div>
+    <!-- 오늘의 추천 카드 -->
+    <div class="rec-card" id="recCard">
+      <div class="rec-label">🎲 오늘의 점메추</div>
+      <div class="rec-loading" id="recLoading"><div class="sp"></div><span>추천 메뉴 고르는 중...</span></div>
+      <div id="recContent" style="display:none;">
+        <div class="rec-title" id="recTitle"></div>
+        <div class="rec-reason" id="recReason"></div>
+        <div class="rec-bottom">
+          <span style="font-size:11px;color:var(--text-tertiary);">AI 추천</span>
+          <button class="rec-refresh" onclick="getRecommendation()">🔀 다시 추천</button>
+        </div>
       </div>
     </div>
     <div class="res-bar">
@@ -425,6 +498,34 @@
 
   <div style="position:relative;overflow:hidden;">
     <div id="map"></div>
+    <!-- 현 지도에서 검색 버튼 -->
+    <div id="reSearchBtn" style="
+      display:none;
+      position:absolute;
+      top:16px;
+      left:50%;
+      transform:translateX(-50%);
+      z-index:100;
+    ">
+      <button onclick="reSearchHere()" style="
+        background:white;
+        border:1.5px solid var(--border);
+        border-radius:999px;
+        padding:10px 20px;
+        font-family:'Noto Sans KR',sans-serif;
+        font-size:13px;
+        font-weight:700;
+        color:var(--text-primary);
+        cursor:pointer;
+        box-shadow:0 2px 12px rgba(0,0,0,0.12);
+        display:flex;align-items:center;gap:6px;
+        white-space:nowrap;
+        transition:all 0.15s;
+      " onmouseover="this.style.background='#3182F6';this.style.color='white';this.style.borderColor='#3182F6';"
+         onmouseout="this.style.background='white';this.style.color='var(--text-primary)';this.style.borderColor='var(--border)';">
+        🔍 현 지도에서 검색
+      </button>
+    </div>
     <div class="drawer" id="drawer">
       <div class="d-handle-wrap"><div class="d-handle"></div></div>
       <div id="dContent"></div>
@@ -433,29 +534,143 @@
 </div>
 
 <script>
-const CX = 37.4838, CY = 126.8985;
-
-const BRANDS = ["GS25","CU","세븐일레븐","이마트24","미니스톱","롯데리아","맥도날드","버거킹","KFC","맘스터치","노브랜드버거","쉐이크쉑","스타벅스","투썸플레이스","이디야","빽다방","메가MGC","컴포즈","더벤티","할리스","탐앤탐스","폴바셋","커피빈","엔제리너스","한솥","본죽","본도시락","김가네","하남돼지집","원할머니보쌈","놀부","엽기떡볶이","명랑핫도그","홍콩반점","청년다방","두끼","파리바게뜨","뚜레쥬르","던킨","베스킨라빈스","크리스피크림","빕스","계절밥상","제일제면소","굽네치킨","BBQ","BHC","교촌","네네치킨","60계","푸라닭","피자헛","도미노","파파존스","서브웨이","아웃백","TGI","매드포갈릭"];
-const isBrand = n => BRANDS.some(b => n.includes(b));
+const NHN_ADDR = "서울특별시 구로구 디지털로26길 72";
+// NHN KCP 정확한 좌표 (구글맵 확인)
+let CX = 37.4808, CY = 126.8937;
 
 const PK="gdpm_payco_v1", RK="gdpm_rv_v1";
 const lsG=k=>{try{return JSON.parse(localStorage.getItem(k)||"{}")}catch{return{}}};
 const lsS=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}};
 let uPayco=lsG(PK), uRevs=lsG(RK);
-const isPayco=p=>uPayco[p.id]===true||isBrand(p.place_name);
+const isPayco=p=>uPayco[p.id]===true;
 
 let map,ps,ovs=[],places=[],filtered=[],sel=null,star=0,pOn=false,cat="FD6",kw=false,busy=false;
 
 window.onload=()=>{
   map=new kakao.maps.Map(document.getElementById("map"),{center:new kakao.maps.LatLng(CX,CY),level:4});
   ps=new kakao.maps.services.Places();
+
+  // NHN KCP 마커 (하드코딩 정확한 좌표)
   new kakao.maps.CustomOverlay({
-    position:new kakao.maps.LatLng(CX,CY),
+    position: new kakao.maps.LatLng(CX, CY),
     content:`<div style="background:#3182F6;color:white;font-size:12px;font-weight:700;padding:6px 14px;border-radius:999px;box-shadow:0 4px 16px rgba(49,130,246,0.4);white-space:nowrap;pointer-events:none;letter-spacing:-0.3px;">🏢 NHN KCP</div>`,
     yAnchor:1.5,zIndex:10
   }).setMap(map);
+
   load();
+
+  // 지도 드래그 시 버튼 표시
+  kakao.maps.event.addListener(map, 'dragend', function() {
+    document.getElementById("reSearchBtn").style.display = "block";
+  });
 };
+
+// ── 오늘의 추천 ──
+const REC_KEY = "gdpm_rec_v1";
+
+// 카테고리별 대표 메뉴 매핑
+const MENU_MAP = {
+  "한식": ["김치찌개","된장찌개","비빔밥","제육볶음","순두부찌개","갈비탕","삼겹살","불고기","냉면","삼계탕"],
+  "일식": ["라멘","돈카츠","초밥","우동","텐동","가츠동","오야코동","연어덮밥","규동","사시미"],
+  "중식": ["짜장면","짬뽕","탕수육","마파두부","볶음밥","훠궈","마라탕","딤섬","군만두","팔보채"],
+  "양식": ["파스타","스테이크","피자","리조또","샐러드","버거","크림수프","샌드위치","그라탕","오믈렛"],
+  "분식": ["떡볶이","순대","라볶이","김밥","튀김","어묵","치즈볶이","쫄면","만두","핫도그"],
+  "카페": ["아메리카노","라떼","카푸치노","플랫화이트","샌드위치","케이크","스콘","와플","크로플","에이드"],
+  "치킨": ["후라이드","양념치킨","간장치킨","파닭","치킨버거","닭강정","오븐구이","마늘치킨","반반치킨","뿌링클"],
+  "고기": ["삼겹살","목살","갈비","항정살","차돌박이","양념갈비","소고기구이","돼지갈비","곱창","대창"],
+  "기타": ["오늘의 특선","점심 정식","특선 메뉴","오늘의 추천","런치 세트"]
+};
+
+function getMenuForPlace(place) {
+  const cat = place.category_name || "";
+  if (cat.includes("한식")) return MENU_MAP["한식"];
+  if (cat.includes("일식")) return MENU_MAP["일식"];
+  if (cat.includes("중식")) return MENU_MAP["중식"];
+  if (cat.includes("양식") || cat.includes("패스트푸드")) return MENU_MAP["양식"];
+  if (cat.includes("분식")) return MENU_MAP["분식"];
+  if (cat.includes("카페") || cat.includes("커피")) return MENU_MAP["카페"];
+  if (cat.includes("치킨")) return MENU_MAP["치킨"];
+  if (cat.includes("고기") || cat.includes("육류")) return MENU_MAP["고기"];
+  return MENU_MAP["기타"];
+}
+
+async function getRecommendation() {
+  document.getElementById("recLoading").style.display = "flex";
+  document.getElementById("recContent").style.display = "none";
+
+  // 실제 로드된 식당에서 랜덤 추출
+  const pool = places.length > 0 ? places : [];
+  if (pool.length === 0) {
+    document.getElementById("recLoading").style.display = "none";
+    document.getElementById("recContent").style.display = "block";
+    document.getElementById("recTitle").innerHTML = `식당을 불러오는 중이에요! 잠시 후 다시 눌러주세요 😊`;
+    document.getElementById("recReason").textContent = "";
+    return;
+  }
+
+  const picked = pool[Math.floor(Math.random() * pool.length)];
+  const menuList = getMenuForPlace(picked);
+  const pickedMenu = menuList[Math.floor(Math.random() * menuList.length)];
+  const dist = picked.distance ? `${picked.distance}m` : "근처";
+
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 150,
+        messages: [{
+          role: "user",
+          content: `너는 귀엽고 친근한 점심 추천 AI야.
+오늘 추천할 식당: "${picked.place_name}" (${dist} 거리)
+추천 메뉴: "${pickedMenu}"
+
+아래 형식으로만 답해줘 (JSON, 다른 말 없이):
+{
+  "reason": "귀엽고 짧은 추천 이유 1~2문장. 이모지 꼭 포함. 직장인 점심 감성으로."
+}
+
+예시:
+{"reason": "맛있는 점심 먹고 오후에 힘내는 거에요! 오늘도 화이팅 💪😋"}`
+        }]
+      })
+    });
+    const data = await res.json();
+    const text = data.content[0].text;
+    const json = JSON.parse(text.replace(/```json|```/g,"").trim());
+
+    document.getElementById("recTitle").innerHTML =
+      `오늘은 <em>'${picked.place_name}'</em>의 <em>'${pickedMenu}'</em> 어떠세요?`;
+    document.getElementById("recReason").textContent = json.reason;
+
+  } catch(e) {
+    // AI 실패 시 fallback 멘트
+    const fallbacks = [
+      `맛있는 점심 먹고 오후에 힘내는 거예요! 💪😋`,
+      `오늘 이거 안 먹으면 후회할 것 같은 느낌적인 느낌...! 🍽️✨`,
+      `점심은 하루의 반환점! 맛있게 먹고 오후도 달려봐요 🏃‍♀️💨`,
+      `AI가 엄선한 오늘의 추천! 믿고 따라와요 😎🎯`,
+      `배고플 땐 생각이 안 나잖아요. 일단 가요! 🚶‍♂️💨`,
+    ];
+    document.getElementById("recTitle").innerHTML =
+      `오늘은 <em>'${picked.place_name}'</em>의 <em>'${pickedMenu}'</em> 어떠세요?`;
+    document.getElementById("recReason").textContent =
+      fallbacks[Math.floor(Math.random() * fallbacks.length)];
+  }
+
+  document.getElementById("recLoading").style.display = "none";
+  document.getElementById("recContent").style.display = "block";
+}
+
+function reSearchHere(){
+  document.getElementById("reSearchBtn").style.display = "none";
+  const center = map.getCenter();
+  CX = center.getLat();
+  CY = center.getLng();
+  closeDrawer();
+  load();
+}
 
 function load(){
   if(busy)return;
@@ -463,7 +678,7 @@ function load(){
   const loc=new kakao.maps.LatLng(CX,CY);
   let pg=1;
   function next(){
-    const opts={location:loc,radius:1000,sort:kakao.maps.services.SortBy.DISTANCE,page:pg};
+    const opts={location:loc,radius:1500,sort:kakao.maps.services.SortBy.DISTANCE,page:pg};
     const cb=(data,status,pag)=>{
       if(status===kakao.maps.services.Status.OK){
         places=places.concat(data);
@@ -477,6 +692,10 @@ function load(){
     const seen=new Set();
     places=places.filter(p=>{if(seen.has(p.id))return false;seen.add(p.id);return true;});
     busy=false;filter();spin(false);
+    // 첫 로드 시에만 추천 실행
+    if(document.getElementById("recContent").style.display !== "block") {
+      getRecommendation();
+    }
   }
 }
 
@@ -492,7 +711,7 @@ function renderCards(){
   const el=document.getElementById("cardList");
   if(!filtered.length){el.innerHTML=`<div class="empty"><div class="empty-ico">🍽️</div><p>조건에 맞는 장소가 없어요</p></div>`;return;}
   el.innerHTML=filtered.map(p=>{
-    const pay=isPayco(p),ub=uPayco[p.id],br=isBrand(p.place_name);
+    const pay=isPayco(p);
     const rv=uRevs[p.id]||[],avg=rv.length?(rv.reduce((s,r)=>s+r.star,0)/rv.length).toFixed(1):null;
     const c=p.category_name?p.category_name.split(">").pop().trim():"";
     const d=p.distance?`${p.distance}m`:"";
@@ -503,7 +722,7 @@ function renderCards(){
         <div style="flex:1;min-width:0;"><div class="pc-name">${p.place_name}</div><div class="pc-cat">${c}</div></div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;margin-left:8px;">
           ${avg?`<div class="pc-rating">★ ${avg}</div>`:""}
-          ${br?`<span class="payco-tag">PAYCO</span>`:ub?`<span class="user-tag">✓ PAYCO</span>`:""}
+          ${pay?`<span class="payco-tag">PAYCO</span>`:""}
         </div>
       </div>
       <div class="pc-tags">${d?`<span class="dist-tag">📍 ${d}</span>`:""}</div>
@@ -546,7 +765,7 @@ function openDrawer(p){
   const avg=rv.length?(rv.reduce((s,r)=>s+r.star,0)/rv.length).toFixed(1):null;
   const d=p.distance?`${p.distance}m`:"-";
   const addr=p.road_address_name||p.address_name||"";
-  const pOn2=uPayco[p.id]===true,br=isBrand(p.place_name);
+  const pOn2=uPayco[p.id]===true;
 
   const rvHtml=rv.map(r=>`
     <div class="rv-card">
@@ -568,11 +787,11 @@ function openDrawer(p){
       <div class="pr-left">
         <div class="pr-icon">💳</div>
         <div>
-          <div class="pr-title">PAYCO 식권 사용 가능</div>
-          <div class="pr-desc">${br?"브랜드 가맹점 (자동 인식)":"직접 등록해서 공유해요"}</div>
+          <div class="pr-title">PAYCO 식권 가능</div>
+          <div class="pr-desc">직접 체크해서 공유해요</div>
         </div>
       </div>
-      ${br?`<div class="brand-badge">가맹점 ✓</div>`:`<button class="pr-toggle ${pOn2?"on":""}" id="pToggle" onclick="tPayco('${p.id}')"></button>`}
+      <button class="pr-toggle ${pOn2?"on":""}" id="pToggle" onclick="tPayco('${p.id}')"></button>
     </div>
     <a class="naver-link" href="https://map.naver.com/v5/search/${encodeURIComponent(p.place_name)}" target="_blank">🗺 네이버 지도에서 보기</a>
     <div class="sec-label">리뷰 ${rv.length}개</div>
@@ -632,7 +851,7 @@ function doSearch(){
         if(pag.hasNextPage){pg++;pag.nextPage();}
         else{busy=false;filter();spin(false);}
       }else{busy=false;filter();spin(false);}
-    },{location:loc,radius:1000,sort:kakao.maps.services.SortBy.DISTANCE,page:pg});
+    },{location:loc,radius:1500,sort:kakao.maps.services.SortBy.DISTANCE,page:pg});
   }
   next();
 }
@@ -643,14 +862,21 @@ document.getElementById("paycoBtn").addEventListener("click",function(){
   pOn=!pOn;this.classList.toggle("active",pOn);filter();closeDrawer();
 });
 
-document.querySelectorAll(".chip").forEach(b=>{
-  b.addEventListener("click",function(){
-    if(busy)return;
-    document.querySelectorAll(".chip").forEach(x=>x.classList.remove("on"));
-    this.classList.add("on");
-    cat=this.dataset.cat;kw=this.dataset.kw==="true";
-    document.getElementById("sInput").value="";
-    closeDrawer();load();
+function scrollChips(dir){
+  const el = document.getElementById("chipsWrap");
+  el.scrollBy({ left: dir * 120, behavior: "smooth" });
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll(".chip").forEach(b=>{
+    b.addEventListener("click",function(){
+      if(busy)return;
+      document.querySelectorAll(".chip").forEach(x=>x.classList.remove("on"));
+      this.classList.add("on");
+      cat=this.dataset.cat;kw=this.dataset.kw==="true";
+      document.getElementById("sInput").value="";
+      closeDrawer();load();
+    });
   });
 });
 </script>
