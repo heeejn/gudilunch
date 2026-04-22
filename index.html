@@ -3,499 +3,656 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>구디밥 — 구로디지털단지 맛집 & 카페</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Bebas+Neue&display=swap" rel="stylesheet" />
+  <title>구디 점메추</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet" />
   <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=e6a5066c0e33bfb365feae38e3ef31f4&libraries=services"></script>
   <style>
     :root {
-      --bg: #0e0e0e;
-      --surface: #181818;
-      --surface2: #222222;
-      --border: #2e2e2e;
-      --accent: #f5c842;
-      --text: #f0ede8;
-      --text-muted: #888;
-      --payco: #ef1c24;
-      --radius: 12px;
+      --bg: #F2F4F6;
+      --white: #FFFFFF;
+      --blue: #3182F6;
+      --blue-light: #EBF3FE;
+      --blue-dark: #1B64DA;
+      --text-primary: #191F28;
+      --text-secondary: #4E5968;
+      --text-tertiary: #8B95A1;
+      --border: #E5E8EB;
+      --payco: #F04452;
+      --payco-bg: #FFF2F3;
+      --green: #00C471;
+      --green-bg: #EDFFF6;
+      --surface: #FFFFFF;
+      --r: 16px;
+      --r-lg: 20px;
+      --r-sm: 10px;
+      --shadow-sm: 0 1px 4px rgba(0,0,0,0.06);
+      --shadow: 0 2px 16px rgba(0,0,0,0.08);
+      --shadow-lg: 0 8px 32px rgba(0,0,0,0.10);
     }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow: hidden; }
 
+    * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+    body {
+      font-family: 'Noto Sans KR', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text-primary);
+      overflow: hidden;
+    }
+
+    /* ── HEADER ── */
     header {
-      position: fixed; top: 0; left: 0; right: 0; z-index: 200;
-      background: rgba(14,14,14,0.97); backdrop-filter: blur(16px);
+      position: fixed; top:0; left:0; right:0; z-index:300;
+      height: 60px;
+      background: var(--white);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 20px;
       border-bottom: 1px solid var(--border);
-      padding: 0 20px; display: flex; align-items: center; justify-content: space-between; height: 56px;
     }
-    .logo { font-family: 'Bebas Neue', sans-serif; font-size: 26px; letter-spacing: 2px; color: var(--accent); }
-    .logo span { color: var(--text-muted); font-size: 12px; font-family: 'Noto Sans KR', sans-serif; letter-spacing: 0; margin-left: 8px; font-weight: 300; }
 
-    .payco-toggle {
-      display: flex; align-items: center; gap: 7px;
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 999px; padding: 5px 14px 5px 8px;
-      cursor: pointer; transition: all 0.2s; user-select: none;
+    .logo-area { display:flex; align-items:center; gap:10px; }
+    .logo-dot {
+      width: 36px; height: 36px;
+      background: var(--blue);
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
     }
-    .payco-toggle:hover { border-color: var(--payco); }
-    .payco-toggle.active { border-color: var(--payco); background: rgba(239,28,36,0.1); }
-    .toggle-dot { width: 30px; height: 17px; background: var(--border); border-radius: 999px; position: relative; transition: background 0.2s; flex-shrink: 0; }
-    .toggle-dot::after { content: ''; position: absolute; width: 11px; height: 11px; background: #fff; border-radius: 50%; top: 3px; left: 3px; transition: left 0.2s; }
-    .payco-toggle.active .toggle-dot { background: var(--payco); }
-    .payco-toggle.active .toggle-dot::after { left: 16px; }
-    .payco-badge { background: var(--payco); color: #fff; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
-    .payco-label { font-size: 12px; font-weight: 500; }
+    .logo-title {
+      font-size: 17px; font-weight: 700;
+      color: var(--text-primary); letter-spacing: -0.5px;
+    }
+    .logo-sub {
+      font-size: 11px; color: var(--text-tertiary);
+      margin-top: 1px; font-weight: 400; letter-spacing: -0.2px;
+    }
 
-    .main-layout { display: grid; grid-template-columns: 400px 1fr; height: 100vh; padding-top: 56px; }
+    /* PAYCO TOGGLE */
+    .payco-btn {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--bg); border: none;
+      border-radius: 999px; padding: 7px 14px 7px 10px;
+      cursor: pointer; transition: background 0.15s; user-select: none;
+    }
+    .payco-btn:hover { background: #E8ECF0; }
+    .payco-btn.active { background: var(--payco-bg); }
 
-    .left-panel { border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+    .sw-track {
+      width: 34px; height: 20px;
+      background: var(--border); border-radius: 999px;
+      position: relative; transition: background 0.2s; flex-shrink:0;
+    }
+    .sw-track::after {
+      content:''; position:absolute;
+      width: 14px; height: 14px; background: white;
+      border-radius: 50%; top: 3px; left: 3px;
+      transition: left 0.2s;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    }
+    .payco-btn.active .sw-track { background: var(--payco); }
+    .payco-btn.active .sw-track::after { left: 17px; }
 
-    .panel-top { padding: 12px 14px 10px; border-bottom: 1px solid var(--border); background: var(--bg); flex-shrink: 0; }
+    .payco-label {
+      font-size: 13px; font-weight: 600;
+      color: var(--text-secondary); letter-spacing: -0.3px;
+    }
+    .payco-btn.active .payco-label { color: var(--payco); }
 
-    .search-bar { display: flex; gap: 8px; margin-bottom: 10px; }
-    .search-input { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: 'Noto Sans KR', sans-serif; font-size: 13px; padding: 8px 12px; outline: none; transition: border 0.15s; }
-    .search-input:focus { border-color: var(--accent); }
-    .search-btn { background: var(--accent); color: #000; border: none; border-radius: 8px; padding: 0 16px; font-size: 13px; font-weight: 700; font-family: 'Noto Sans KR', sans-serif; cursor: pointer; transition: opacity 0.15s; }
-    .search-btn:hover { opacity: 0.85; }
+    /* ── LAYOUT ── */
+    .layout {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      height: 100vh;
+      padding-top: 60px;
+    }
 
-    .category-filter { display: flex; gap: 5px; flex-wrap: wrap; }
-    .cat-btn { background: var(--surface); border: 1px solid var(--border); color: var(--text-muted); border-radius: 999px; padding: 4px 11px; font-size: 11px; font-family: 'Noto Sans KR', sans-serif; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
-    .cat-btn:hover { border-color: var(--accent); color: var(--accent); }
-    .cat-btn.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 700; }
+    /* ── LEFT PANEL ── */
+    .left {
+      background: var(--bg);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
 
-    .result-info { padding: 7px 14px; font-size: 11px; color: var(--text-muted); border-bottom: 1px solid var(--border); flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; }
-    .result-info strong { color: var(--accent); }
-    .loading-spinner { display: none; align-items: center; gap: 6px; font-size: 11px; color: var(--text-muted); }
-    .loading-spinner.show { display: flex; }
-    .spinner { width: 12px; height: 12px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.6s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    /* SEARCH */
+    .search-zone {
+      padding: 14px 14px 12px;
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
 
-    .restaurant-list { flex: 1; overflow-y: auto; padding: 6px 10px 20px; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+    .search-row { display:flex; gap:8px; margin-bottom:12px; }
 
-    .restaurant-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 13px; margin-bottom: 6px; cursor: pointer; transition: all 0.15s; }
-    .restaurant-card:hover { border-color: var(--accent); transform: translateY(-1px); }
-    .restaurant-card.active { border-color: var(--accent); background: var(--surface2); }
+    .search-field {
+      flex:1; display:flex; align-items:center; gap:8px;
+      background: var(--bg); border-radius: 12px;
+      padding: 0 14px; transition: all 0.15s;
+      border: 1.5px solid transparent;
+    }
+    .search-field:focus-within {
+      background: white;
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(49,130,246,0.1);
+    }
+    .search-field input {
+      flex:1; border:none; background:transparent;
+      font-family: inherit; font-size: 14px;
+      color: var(--text-primary); outline:none; padding: 10px 0;
+      letter-spacing: -0.2px;
+    }
+    .search-field input::placeholder { color: var(--text-tertiary); }
+    .search-field .si { color: var(--text-tertiary); font-size: 15px; }
 
-    .card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px; }
-    .card-name { font-size: 14px; font-weight: 700; }
-    .card-cat { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
-    .card-rating { font-size: 12px; font-weight: 700; color: var(--accent); white-space: nowrap; }
+    .search-go {
+      background: var(--blue); color: white;
+      border: none; border-radius: 12px;
+      padding: 0 18px; height: 42px;
+      font-family: inherit; font-size: 14px; font-weight: 700;
+      cursor: pointer; letter-spacing: -0.3px;
+      transition: background 0.15s;
+    }
+    .search-go:hover { background: var(--blue-dark); }
+    .search-go:active { transform: scale(0.98); }
 
-    .card-meta { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-bottom: 4px; }
-    .card-distance { font-size: 11px; color: var(--text-muted); background: var(--surface2); padding: 2px 7px; border-radius: 999px; }
-    .payco-chip { background: rgba(239,28,36,0.15); border: 1px solid rgba(239,28,36,0.3); color: var(--payco); font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 4px; }
-    .card-addr { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .card-review-preview { margin-top: 5px; font-size: 11px; color: var(--text-muted); font-style: italic; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; }
+    /* CATEGORY CHIPS */
+    .chips {
+      display: flex; gap: 6px; overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .chips::-webkit-scrollbar { display: none; }
 
-    #map { width: 100%; height: 100%; }
+    .chip {
+      background: var(--bg); border: 1.5px solid var(--border);
+      color: var(--text-secondary); border-radius: 999px;
+      padding: 6px 14px; font-size: 13px; font-weight: 500;
+      font-family: inherit; cursor: pointer; white-space: nowrap;
+      letter-spacing: -0.3px; transition: all 0.15s;
+    }
+    .chip:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-light); }
+    .chip.on { background: var(--blue); color: white; border-color: var(--blue); font-weight: 700; }
 
-    .detail-drawer {
-      position: fixed; bottom: 0; left: 400px; right: 0;
-      background: var(--surface); border-top: 1px solid var(--border);
-      padding: 14px 20px 20px;
+    /* RESULT BAR */
+    .res-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 16px;
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .res-cnt { font-size: 13px; color: var(--text-tertiary); font-weight: 400; letter-spacing: -0.2px; }
+    .res-cnt b { color: var(--blue); font-weight: 700; }
+
+    .spin-wrap { display:none; align-items:center; gap:6px; font-size:12px; color:var(--text-tertiary); }
+    .spin-wrap.on { display:flex; }
+    .sp { width:14px; height:14px; border:2px solid var(--border); border-top-color:var(--blue); border-radius:50%; animation:spin 0.6s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    /* CARDS */
+    .card-list { flex:1; overflow-y:auto; padding:12px 12px 80px; scrollbar-width:thin; scrollbar-color:var(--border) transparent; }
+
+    .place-card {
+      background: var(--white);
+      border-radius: var(--r-lg);
+      padding: 16px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: all 0.18s;
+      box-shadow: var(--shadow-sm);
+      border: 1.5px solid transparent;
+    }
+    .place-card:hover { box-shadow: var(--shadow); transform: translateY(-1px); }
+    .place-card.on { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(49,130,246,0.12), var(--shadow); }
+
+    .pc-top { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; }
+    .pc-name { font-size: 15px; font-weight: 700; letter-spacing:-0.4px; color:var(--text-primary); }
+    .pc-cat { font-size: 12px; color: var(--text-tertiary); margin-top:2px; font-weight:400; letter-spacing:-0.2px; }
+    .pc-rating { font-size: 13px; font-weight: 700; color: var(--blue); white-space:nowrap; }
+
+    .pc-tags { display:flex; gap:5px; flex-wrap:wrap; margin-bottom:7px; align-items:center; }
+    .dist-tag {
+      font-size: 12px; color: var(--text-tertiary);
+      background: var(--bg); border-radius: 6px;
+      padding: 2px 8px;
+    }
+    .payco-tag {
+      background: var(--payco-bg); color: var(--payco);
+      font-size: 11px; font-weight: 700; padding: 2px 8px;
+      border-radius: 6px; letter-spacing: 0.2px;
+    }
+    .user-tag {
+      background: var(--green-bg); color: var(--green);
+      font-size: 11px; font-weight: 700; padding: 2px 8px;
+      border-radius: 6px;
+    }
+
+    .pc-addr { font-size: 12px; color: var(--text-tertiary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; letter-spacing:-0.2px; }
+    .pc-review { margin-top:8px; padding:8px 10px; background:var(--bg); border-radius:10px; font-size:12px; color:var(--text-secondary); font-style:italic; overflow:hidden; display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; letter-spacing:-0.2px; }
+
+    .empty { text-align:center; padding:64px 20px; color:var(--text-tertiary); }
+    .empty-ico { font-size:44px; margin-bottom:12px; }
+    .empty p { font-size:14px; }
+
+    /* MAP */
+    #map { width:100%; height:100%; }
+
+    /* DRAWER */
+    .drawer {
+      position:fixed; bottom:0; left:380px; right:0;
+      background: var(--white);
+      border-top: 1px solid var(--border);
+      border-radius: 20px 20px 0 0;
+      padding: 0 24px 28px;
       transform: translateY(100%);
-      transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
-      z-index: 150; max-height: 55vh; overflow-y: auto;
+      transition: transform 0.32s cubic-bezier(0.32,0.72,0,1);
+      z-index:200; max-height:60vh; overflow-y:auto;
+      box-shadow: 0 -8px 40px rgba(0,0,0,0.08);
     }
-    .detail-drawer.open { transform: translateY(0); }
+    .drawer.on { transform: translateY(0); }
 
-    .drawer-handle { width: 36px; height: 3px; background: var(--border); border-radius: 2px; margin: 0 auto 12px; }
-    .drawer-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
-    .drawer-name { font-size: 19px; font-weight: 900; line-height: 1.2; }
-    .drawer-close { background: var(--surface2); border: 1px solid var(--border); color: var(--text-muted); width: 28px; height: 28px; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.15s; }
-    .drawer-close:hover { border-color: var(--accent); color: var(--accent); }
+    .d-handle-wrap { padding: 12px 0 4px; display:flex; justify-content:center; position:sticky; top:0; background:white; z-index:1; }
+    .d-handle { width:36px; height:4px; background:var(--border); border-radius:2px; }
 
-    .drawer-info-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
-    .drawer-rating-big { font-size: 22px; font-weight: 900; color: var(--accent); }
-    .drawer-rating-big span { font-size: 12px; color: var(--text-muted); font-weight: 400; }
-    .info-pill { background: var(--bg); border: 1px solid var(--border); padding: 5px 11px; border-radius: 8px; font-size: 12px; }
-    .info-pill label { color: var(--text-muted); font-size: 10px; display: block; margin-bottom: 1px; }
+    .d-close-row { display:flex; justify-content:flex-end; margin-bottom:4px; }
+    .d-close {
+      width:28px; height:28px; border-radius:50%;
+      background:var(--bg); border:none; cursor:pointer;
+      font-size:13px; color:var(--text-tertiary);
+      display:flex; align-items:center; justify-content:center;
+      transition:background 0.15s; font-weight:700;
+    }
+    .d-close:hover { background:var(--border); }
 
-    .naver-btn { display: inline-flex; align-items: center; gap: 5px; background: #03C75A; color: #fff; border: none; border-radius: 8px; padding: 6px 13px; font-size: 12px; font-weight: 700; font-family: 'Noto Sans KR', sans-serif; cursor: pointer; text-decoration: none; margin-bottom: 12px; }
+    .d-name { font-size:22px; font-weight:800; letter-spacing:-0.6px; margin-bottom:4px; }
+    .d-sub { font-size:13px; color:var(--text-tertiary); margin-bottom:14px; letter-spacing:-0.2px; }
 
-    .section-title { font-size: 10px; font-weight: 700; letter-spacing: 2px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; }
+    .d-stats { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+    .d-stat {
+      background:var(--bg); border-radius:12px;
+      padding:8px 14px; font-size:13px; color:var(--text-secondary);
+      letter-spacing:-0.2px;
+    }
+    .d-stat label { font-size:11px; color:var(--text-tertiary); display:block; margin-bottom:2px; font-weight:500; }
+    .d-big-rating { font-size:22px; font-weight:800; color:var(--blue); }
+    .d-big-rating span { font-size:12px; color:var(--text-tertiary); font-weight:400; }
 
-    .review-item { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-bottom: 5px; }
-    .review-top { display: flex; justify-content: space-between; margin-bottom: 4px; }
-    .review-author { font-size: 12px; font-weight: 700; }
-    .review-date { font-size: 10px; color: var(--text-muted); }
-    .review-text { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+    /* PAYCO ROW */
+    .payco-row {
+      display:flex; align-items:center; justify-content:space-between;
+      background:var(--bg); border-radius: var(--r);
+      padding:14px 16px; margin-bottom:16px;
+    }
+    .pr-left { display:flex; align-items:center; gap:12px; }
+    .pr-icon {
+      width:40px; height:40px; border-radius:12px;
+      background:var(--payco-bg); display:flex; align-items:center; justify-content:center;
+      font-size:20px; flex-shrink:0;
+    }
+    .pr-title { font-size:14px; font-weight:700; letter-spacing:-0.3px; }
+    .pr-desc { font-size:12px; color:var(--text-tertiary); margin-top:2px; letter-spacing:-0.2px; }
 
-    .write-review { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-top: 10px; }
-    .write-review-title { font-size: 12px; font-weight: 700; margin-bottom: 8px; color: var(--accent); }
-    .review-input-row { display: flex; gap: 6px; margin-bottom: 6px; }
-    .review-input-row input, .review-textarea { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: 'Noto Sans KR', sans-serif; font-size: 12px; padding: 7px 10px; outline: none; transition: border 0.15s; }
-    .review-input-row input:focus, .review-textarea:focus { border-color: var(--accent); }
-    .review-input-row input { flex: 1; }
-    .review-textarea { width: 100%; height: 60px; resize: none; display: block; margin-bottom: 6px; }
-    .review-submit { background: var(--accent); color: #000; border: none; border-radius: 8px; padding: 7px 18px; font-family: 'Noto Sans KR', sans-serif; font-size: 12px; font-weight: 700; cursor: pointer; transition: opacity 0.15s; }
-    .review-submit:hover { opacity: 0.85; }
+    .pr-toggle {
+      width:48px; height:28px; background:var(--border);
+      border-radius:999px; cursor:pointer;
+      position:relative; transition:background 0.2s; flex-shrink:0;
+      border:none;
+    }
+    .pr-toggle::after {
+      content:''; position:absolute;
+      width:20px; height:20px; background:white;
+      border-radius:50%; top:4px; left:4px;
+      transition:left 0.2s;
+      box-shadow:0 1px 4px rgba(0,0,0,0.15);
+    }
+    .pr-toggle.on { background:var(--payco); }
+    .pr-toggle.on::after { left:24px; }
 
-    .star-select { display: flex; gap: 3px; margin-bottom: 6px; }
-    .star-select span { font-size: 18px; cursor: pointer; color: var(--border); transition: color 0.1s; }
-    .star-select span.on { color: var(--accent); }
+    .brand-badge {
+      background:var(--payco); color:white;
+      font-size:12px; font-weight:700;
+      padding:5px 12px; border-radius:8px; letter-spacing:-0.2px;
+    }
 
-    .empty-state { text-align: center; padding: 50px 20px; color: var(--text-muted); }
-    .empty-state .icon { font-size: 36px; margin-bottom: 10px; }
+    .naver-link {
+      display:inline-flex; align-items:center; gap:6px;
+      background:#03C75A; color:white; border:none;
+      border-radius:10px; padding:9px 16px; font-size:13px;
+      font-weight:700; font-family:inherit; cursor:pointer;
+      text-decoration:none; margin-bottom:20px;
+      letter-spacing:-0.3px; transition:opacity 0.15s;
+    }
+    .naver-link:hover { opacity:0.88; }
 
-    ::-webkit-scrollbar { width: 3px; }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .sec-label {
+      font-size:13px; font-weight:700; color:var(--text-primary);
+      letter-spacing:-0.3px; margin-bottom:10px;
+    }
 
-    @media (max-width: 768px) {
-      .main-layout { grid-template-columns: 1fr; grid-template-rows: 45vh 1fr; }
-      .detail-drawer { left: 0; max-height: 70vh; }
+    /* REVIEWS */
+    .rv-card { background:var(--bg); border-radius:12px; padding:12px 14px; margin-bottom:8px; }
+    .rv-top { display:flex; justify-content:space-between; margin-bottom:4px; }
+    .rv-who { font-size:13px; font-weight:700; letter-spacing:-0.3px; }
+    .rv-when { font-size:11px; color:var(--text-tertiary); }
+    .rv-stars { color:var(--blue); font-size:12px; margin-bottom:4px; }
+    .rv-body { font-size:13px; color:var(--text-secondary); line-height:1.6; letter-spacing:-0.2px; }
+
+    /* WRITE */
+    .write-box {
+      background:var(--bg); border-radius:var(--r);
+      padding:16px; margin-top:12px;
+    }
+    .write-title { font-size:14px; font-weight:700; letter-spacing:-0.3px; margin-bottom:12px; }
+    .write-row { display:flex; gap:8px; margin-bottom:10px; }
+    .w-input, .w-ta {
+      background:white; border:1.5px solid var(--border);
+      border-radius:10px; color:var(--text-primary);
+      font-family:inherit; font-size:13px;
+      padding:9px 13px; outline:none;
+      transition:border-color 0.15s, box-shadow 0.15s;
+      letter-spacing:-0.2px;
+    }
+    .w-input:focus, .w-ta:focus {
+      border-color:var(--blue);
+      box-shadow:0 0 0 3px rgba(49,130,246,0.1);
+    }
+    .w-input { flex:1; }
+    .w-ta { width:100%; height:68px; resize:none; display:block; margin-bottom:10px; }
+
+    .star-pick { display:flex; gap:6px; margin-bottom:10px; }
+    .star-pick span { font-size:22px; cursor:pointer; color:var(--border); transition:color 0.1s; }
+    .star-pick span.on { color:#FFB800; }
+
+    .w-submit {
+      background:var(--blue); color:white; border:none;
+      border-radius:10px; padding:10px 22px;
+      font-family:inherit; font-size:13px; font-weight:700;
+      cursor:pointer; transition:background 0.15s; letter-spacing:-0.3px;
+    }
+    .w-submit:hover { background:var(--blue-dark); }
+    .w-submit:active { transform:scale(0.98); }
+
+    ::-webkit-scrollbar { width:4px; }
+    ::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+
+    @media (max-width:768px) {
+      .layout { grid-template-columns:1fr; grid-template-rows:45vh 1fr; }
+      .drawer { left:0; max-height:75vh; }
     }
   </style>
 </head>
 <body>
 
 <header>
-  <span class="logo">구디밥 <span>구로디지털단지 맛집 & 카페</span></span>
-  <label class="payco-toggle" id="paycoToggle">
-    <div class="toggle-dot"></div>
-    <span class="payco-badge">PAYCO</span>
-    <span class="payco-label">식권만 보기</span>
-  </label>
+  <div class="logo-area">
+    <div class="logo-dot">🍱</div>
+    <div>
+      <div class="logo-title">구디 점메추</div>
+      <div class="logo-sub">NHN KCP 주변 점심 메뉴 추천</div>
+    </div>
+  </div>
+  <button class="payco-btn" id="paycoBtn">
+    <div class="sw-track"></div>
+    <span class="payco-label">PAYCO 식권만</span>
+  </button>
 </header>
 
-<div class="main-layout">
-  <div class="left-panel">
-    <div class="panel-top">
-      <div class="search-bar">
-        <input class="search-input" id="searchInput" type="text" placeholder="음식 종류 또는 가게명 검색..." />
-        <button class="search-btn" onclick="doSearch()">검색</button>
+<div class="layout">
+  <div class="left">
+    <div class="search-zone">
+      <div class="search-row">
+        <div class="search-field">
+          <span class="si">🔍</span>
+          <input id="sInput" type="text" placeholder="가게명, 메뉴 검색" />
+        </div>
+        <button class="search-go" onclick="doSearch()">검색</button>
       </div>
-      <div class="category-filter">
-        <button class="cat-btn active" data-cat="FD6" data-label="음식점">🍽 전체 음식점</button>
-        <button class="cat-btn" data-cat="CE7" data-label="카페">☕ 카페</button>
-        <button class="cat-btn" data-cat="한식" data-label="한식" data-keyword="true">🍚 한식</button>
-        <button class="cat-btn" data-cat="일식" data-label="일식" data-keyword="true">🍱 일식</button>
-        <button class="cat-btn" data-cat="중식" data-label="중식" data-keyword="true">🥢 중식</button>
-        <button class="cat-btn" data-cat="양식" data-label="양식" data-keyword="true">🍝 양식</button>
-        <button class="cat-btn" data-cat="분식" data-label="분식" data-keyword="true">🍜 분식</button>
-      </div>
-    </div>
-    <div class="result-info">
-      <span id="resultCount">로딩 중...</span>
-      <div class="loading-spinner" id="loadingSpinner">
-        <div class="spinner"></div><span>불러오는 중</span>
+      <div class="chips">
+        <button class="chip on" data-cat="FD6" data-kw="false">전체 음식점</button>
+        <button class="chip" data-cat="CE7" data-kw="false">☕ 카페</button>
+        <button class="chip" data-cat="한식" data-kw="true">🍚 한식</button>
+        <button class="chip" data-cat="일식" data-kw="true">🍱 일식</button>
+        <button class="chip" data-cat="중식" data-kw="true">🥢 중식</button>
+        <button class="chip" data-cat="양식" data-kw="true">🍝 양식</button>
+        <button class="chip" data-cat="분식" data-kw="true">🍜 분식</button>
+        <button class="chip" data-cat="고기" data-kw="true">🥩 고기</button>
       </div>
     </div>
-    <div class="restaurant-list" id="restaurantList"></div>
+    <div class="res-bar">
+      <span class="res-cnt" id="rCnt">불러오는 중...</span>
+      <div class="spin-wrap" id="spinner"><div class="sp"></div><span>검색 중</span></div>
+    </div>
+    <div class="card-list" id="cardList"></div>
   </div>
 
   <div style="position:relative;overflow:hidden;">
     <div id="map"></div>
-    <div class="detail-drawer" id="detailDrawer">
-      <div class="drawer-handle"></div>
-      <div id="drawerContent"></div>
+    <div class="drawer" id="drawer">
+      <div class="d-handle-wrap"><div class="d-handle"></div></div>
+      <div id="dContent"></div>
     </div>
   </div>
 </div>
 
 <script>
-// ── PAYCO 가맹점 브랜드 목록 ──
-const PAYCO_BRANDS = [
-  "GS25","CU","세븐일레븐","이마트24","미니스톱",
-  "롯데리아","맥도날드","버거킹","KFC","맘스터치","노브랜드버거","쉐이크쉑","파이브가이즈",
-  "스타벅스","투썸플레이스","이디야","빽다방","메가MGC","컴포즈","더벤티","할리스","탐앤탐스","폴바셋","커피빈","엔제리너스",
-  "한솥","본죽","본도시락","김가네","하남돼지집","원할머니보쌈","놀부부대찌개",
-  "엽기떡볶이","명랑핫도그","홍콩반점","청년다당","두끼","떡볶이의신",
-  "파리바게뜨","뚜레쥬르","던킨","베스킨라빈스","크리스피크림",
-  "빕스","계절밥상","제일제면소","더플레이스",
-  "굽네치킨","BBQ","BHC","교촌","네네치킨","60계치킨","푸라닭",
-  "피자헛","도미노피자","파파존스",
-  "서브웨이","써브웨이",
-  "CJ푸드빌","아웃백","TGI","매드포갈릭"
-];
+const CX = 37.4838, CY = 126.8985;
 
-function isPayco(name) {
-  return PAYCO_BRANDS.some(b => name.includes(b));
-}
+const BRANDS = ["GS25","CU","세븐일레븐","이마트24","미니스톱","롯데리아","맥도날드","버거킹","KFC","맘스터치","노브랜드버거","쉐이크쉑","스타벅스","투썸플레이스","이디야","빽다방","메가MGC","컴포즈","더벤티","할리스","탐앤탐스","폴바셋","커피빈","엔제리너스","한솥","본죽","본도시락","김가네","하남돼지집","원할머니보쌈","놀부","엽기떡볶이","명랑핫도그","홍콩반점","청년다방","두끼","파리바게뜨","뚜레쥬르","던킨","베스킨라빈스","크리스피크림","빕스","계절밥상","제일제면소","굽네치킨","BBQ","BHC","교촌","네네치킨","60계","푸라닭","피자헛","도미노","파파존스","서브웨이","아웃백","TGI","매드포갈릭"];
+const isBrand = n => BRANDS.some(b => n.includes(b));
 
-// ── STATE ──
-const CENTER_LAT = 37.4853;
-const CENTER_LNG = 126.9019;
-let map, ps;
-let allPlaces = [];
-let filteredPlaces = [];
-let overlays = [];
-let selectedPlace = null;
-let selectedStar = 0;
-let paycoOnly = false;
-let currentCat = "FD6";
-let currentLabel = "음식점";
-let isKeywordCat = false;
-let isLoading = false;
+const PK="gdpm_payco_v1", RK="gdpm_rv_v1";
+const lsG=k=>{try{return JSON.parse(localStorage.getItem(k)||"{}")}catch{return{}}};
+const lsS=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}};
+let uPayco=lsG(PK), uRevs=lsG(RK);
+const isPayco=p=>uPayco[p.id]===true||isBrand(p.place_name);
 
-const STORAGE_KEY = "gudibap_reviews_v3";
-function loadReviews() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"); } catch { return {}; } }
-function saveReviews(d) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); } catch {} }
-let allReviews = loadReviews();
+let map,ps,ovs=[],places=[],filtered=[],sel=null,star=0,pOn=false,cat="FD6",kw=false,busy=false;
 
-// ── MAP INIT ──
-function initMap() {
-  map = new kakao.maps.Map(document.getElementById("map"), {
-    center: new kakao.maps.LatLng(CENTER_LAT, CENTER_LNG),
-    level: 4
-  });
-  ps = new kakao.maps.services.Places();
-
-  // 역 마커
+window.onload=()=>{
+  map=new kakao.maps.Map(document.getElementById("map"),{center:new kakao.maps.LatLng(CX,CY),level:4});
+  ps=new kakao.maps.services.Places();
   new kakao.maps.CustomOverlay({
-    position: new kakao.maps.LatLng(CENTER_LAT, CENTER_LNG),
-    content: `<div style="background:#f5c842;color:#000;font-size:11px;font-weight:900;padding:4px 10px;border-radius:20px;border:2px solid #c8a000;box-shadow:0 2px 8px rgba(0,0,0,0.5);white-space:nowrap;pointer-events:none;">🚇 구로디지털단지역</div>`,
-    yAnchor: 1.3,
-    zIndex: 10
+    position:new kakao.maps.LatLng(CX,CY),
+    content:`<div style="background:#3182F6;color:white;font-size:12px;font-weight:700;padding:6px 14px;border-radius:999px;box-shadow:0 4px 16px rgba(49,130,246,0.4);white-space:nowrap;pointer-events:none;letter-spacing:-0.3px;">🏢 NHN KCP</div>`,
+    yAnchor:1.5,zIndex:10
   }).setMap(map);
+  load();
+};
 
-  loadPlaces();
-}
-
-// ── LOAD ──
-function loadPlaces() {
-  if (isLoading) return;
-  isLoading = true;
-  showLoading(true);
-  allPlaces = [];
-  clearOverlays();
-
-  if (!isKeywordCat) {
-    // FD6(음식점) or CE7(카페) — 카테고리 검색, 최대 15페이지
-    let page = 1;
-    function nextPage() {
-      ps.categorySearch(currentCat, (data, status, pagination) => {
-        if (status === kakao.maps.services.Status.OK) {
-          allPlaces = allPlaces.concat(data);
-          if (pagination.hasNextPage && page < 15) {
-            page++;
-            pagination.nextPage();
-          } else {
-            done();
-          }
-        } else { done(); }
-      }, { location: new kakao.maps.LatLng(CENTER_LAT, CENTER_LNG), radius: 1000, sort: kakao.maps.services.SortBy.DISTANCE, page });
-    }
-    nextPage();
-  } else {
-    // 한식/일식 등 — 키워드 검색
-    let page = 1;
-    function nextPage() {
-      ps.keywordSearch(currentLabel + " 구로디지털단지", (data, status, pagination) => {
-        if (status === kakao.maps.services.Status.OK) {
-          allPlaces = allPlaces.concat(data);
-          if (pagination.hasNextPage && page < 10) {
-            page++;
-            pagination.nextPage();
-          } else { done(); }
-        } else { done(); }
-      }, { location: new kakao.maps.LatLng(CENTER_LAT, CENTER_LNG), radius: 1000, sort: kakao.maps.services.SortBy.DISTANCE, page });
-    }
-    nextPage();
+function load(){
+  if(busy)return;
+  busy=true;spin(true);places=[];clearOv();
+  const loc=new kakao.maps.LatLng(CX,CY);
+  let pg=1;
+  function next(){
+    const opts={location:loc,radius:1000,sort:kakao.maps.services.SortBy.DISTANCE,page:pg};
+    const cb=(data,status,pag)=>{
+      if(status===kakao.maps.services.Status.OK){
+        places=places.concat(data);
+        if(pag.hasNextPage){pg++;pag.nextPage();}else done();
+      }else done();
+    };
+    kw?ps.keywordSearch(cat+" 구로디지털단지",cb,opts):ps.categorySearch(cat,cb,opts);
   }
-
-  function done() {
-    // 중복 제거
-    const seen = new Set();
-    allPlaces = allPlaces.filter(p => { if (seen.has(p.id)) return false; seen.add(p.id); return true; });
-    isLoading = false;
-    applyFilter();
-    showLoading(false);
+  next();
+  function done(){
+    const seen=new Set();
+    places=places.filter(p=>{if(seen.has(p.id))return false;seen.add(p.id);return true;});
+    busy=false;filter();spin(false);
   }
 }
 
-// ── FILTER ──
-function applyFilter() {
-  filteredPlaces = allPlaces.filter(p => !paycoOnly || isPayco(p.place_name));
-  renderList();
-  renderOverlays();
-  document.getElementById("resultCount").innerHTML = `<strong>${filteredPlaces.length}</strong>개${paycoOnly ? ' · PAYCO 가맹점만' : ''}`;
+function filter(){
+  filtered=places.filter(p=>!pOn||isPayco(p));
+  renderCards();renderOv();
+  document.getElementById("rCnt").innerHTML=`<b>${filtered.length}</b>개 장소${pOn?" · PAYCO":""}`;
 }
 
-function showLoading(v) { document.getElementById("loadingSpinner").classList.toggle("show", v); }
+function spin(v){document.getElementById("spinner").classList.toggle("on",v);}
 
-// ── RENDER LIST ──
-function renderList() {
-  const c = document.getElementById("restaurantList");
-  if (!filteredPlaces.length) {
-    c.innerHTML = `<div class="empty-state"><div class="icon">🍽️</div><p>조건에 맞는 장소가 없어요</p></div>`;
-    return;
-  }
-  c.innerHTML = filteredPlaces.map(p => {
-    const payco = isPayco(p.place_name);
-    const revs = allReviews[p.id] || [];
-    const avg = revs.length ? (revs.reduce((s,r)=>s+r.star,0)/revs.length).toFixed(1) : null;
-    const lastRev = revs.length ? revs[revs.length-1].text : "";
-    const catName = p.category_name ? p.category_name.split(">").pop().trim() : "";
-    const dist = p.distance ? `${p.distance}m` : "";
-    const active = selectedPlace && selectedPlace.id === p.id ? "active" : "";
-    return `<div class="restaurant-card ${active}" onclick="selectPlace('${p.id}')" id="card-${p.id}">
-      <div class="card-top">
-        <div style="flex:1;min-width:0;"><div class="card-name">${p.place_name}</div><div class="card-cat">${catName}</div></div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0;margin-left:8px;">
-          ${avg ? `<div class="card-rating">★ ${avg}</div>` : ""}
-          ${payco ? `<span class="payco-chip">PAYCO</span>` : ""}
+function renderCards(){
+  const el=document.getElementById("cardList");
+  if(!filtered.length){el.innerHTML=`<div class="empty"><div class="empty-ico">🍽️</div><p>조건에 맞는 장소가 없어요</p></div>`;return;}
+  el.innerHTML=filtered.map(p=>{
+    const pay=isPayco(p),ub=uPayco[p.id],br=isBrand(p.place_name);
+    const rv=uRevs[p.id]||[],avg=rv.length?(rv.reduce((s,r)=>s+r.star,0)/rv.length).toFixed(1):null;
+    const c=p.category_name?p.category_name.split(">").pop().trim():"";
+    const d=p.distance?`${p.distance}m`:"";
+    const last=rv.length?rv[rv.length-1].text:"";
+    const active=sel&&sel.id===p.id?"on":"";
+    return`<div class="place-card ${active}" onclick="pick('${p.id}')" id="c-${p.id}">
+      <div class="pc-top">
+        <div style="flex:1;min-width:0;"><div class="pc-name">${p.place_name}</div><div class="pc-cat">${c}</div></div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;margin-left:8px;">
+          ${avg?`<div class="pc-rating">★ ${avg}</div>`:""}
+          ${br?`<span class="payco-tag">PAYCO</span>`:ub?`<span class="user-tag">✓ PAYCO</span>`:""}
         </div>
       </div>
-      <div class="card-meta">${dist ? `<span class="card-distance">📍 ${dist}</span>` : ""}</div>
-      <div class="card-addr">${p.road_address_name || p.address_name || ""}</div>
-      ${lastRev ? `<div class="card-review-preview">"${lastRev}"</div>` : ""}
+      <div class="pc-tags">${d?`<span class="dist-tag">📍 ${d}</span>`:""}</div>
+      <div class="pc-addr">${p.road_address_name||p.address_name||""}</div>
+      ${last?`<div class="pc-review">"${last}"</div>`:""}
     </div>`;
   }).join("");
 }
 
-// ── OVERLAYS ──
-function clearOverlays() { overlays.forEach(o => o.setMap(null)); overlays = []; }
+function clearOv(){ovs.forEach(o=>o.setMap(null));ovs=[];}
 
-function renderOverlays() {
-  clearOverlays();
-  filteredPlaces.forEach(p => {
-    const payco = isPayco(p.place_name);
-    const isCafe = p.category_name && p.category_name.includes("카페");
-    const bg = payco ? "#ef1c24" : isCafe ? "#5C3A1E" : "#1e1e1e";
-    const border = payco ? "#bf0e14" : isCafe ? "#8B6040" : "#3a3a3a";
-    const icon = isCafe ? "☕" : "🍽";
-    const o = new kakao.maps.CustomOverlay({
-      position: new kakao.maps.LatLng(p.y, p.x),
-      content: `<div onclick="selectPlace('${p.id}')" style="background:${bg};color:#f0ede8;border:1.5px solid ${border};border-radius:6px;padding:3px 8px;font-size:11px;font-weight:600;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.5);">${icon} ${p.place_name}</div>`,
-      yAnchor: 1.2
+function renderOv(){
+  clearOv();
+  filtered.forEach(p=>{
+    const pay=isPayco(p),cafe=p.category_name&&p.category_name.includes("카페");
+    const bg=pay?"#F04452":cafe?"#8B5E3C":"#3182F6";
+    const o=new kakao.maps.CustomOverlay({
+      position:new kakao.maps.LatLng(p.y,p.x),
+      content:`<div onclick="pick('${p.id}')" style="background:${bg};color:white;border-radius:999px;padding:5px 12px;font-size:11px;font-weight:700;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.18);letter-spacing:-0.2px;">${cafe?"☕":"🍽"} ${p.place_name}</div>`,
+      yAnchor:1.4
     });
-    o.setMap(map);
-    overlays.push(o);
+    o.setMap(map);ovs.push(o);
   });
 }
 
-// ── SELECT ──
-function selectPlace(id) {
-  const p = filteredPlaces.find(x => x.id === id);
-  if (!p) return;
-  selectedPlace = p;
-  document.querySelectorAll(".restaurant-card").forEach(c => c.classList.remove("active"));
-  const card = document.getElementById(`card-${id}`);
-  if (card) { card.classList.add("active"); card.scrollIntoView({ behavior:"smooth", block:"nearest" }); }
-  map.panTo(new kakao.maps.LatLng(p.y, p.x));
+function pick(id){
+  const p=filtered.find(x=>x.id===id);if(!p)return;
+  sel=p;
+  document.querySelectorAll(".place-card").forEach(c=>c.classList.remove("on"));
+  const card=document.getElementById(`c-${id}`);
+  if(card){card.classList.add("on");card.scrollIntoView({behavior:"smooth",block:"nearest"});}
+  map.panTo(new kakao.maps.LatLng(p.y,p.x));
   openDrawer(p);
 }
 
-// ── DRAWER ──
-function openDrawer(p) {
-  selectedStar = 0;
-  const payco = isPayco(p.place_name);
-  const catName = p.category_name ? p.category_name.split(">").pop().trim() : "";
-  const revs = allReviews[p.id] || [];
-  const avg = revs.length ? (revs.reduce((s,r)=>s+r.star,0)/revs.length).toFixed(1) : null;
-  const dist = p.distance ? `${p.distance}m` : "-";
-  const addr = p.road_address_name || p.address_name || "";
+function openDrawer(p){
+  star=0;
+  const c=p.category_name?p.category_name.split(">").pop().trim():"";
+  const rv=uRevs[p.id]||[];
+  const avg=rv.length?(rv.reduce((s,r)=>s+r.star,0)/rv.length).toFixed(1):null;
+  const d=p.distance?`${p.distance}m`:"-";
+  const addr=p.road_address_name||p.address_name||"";
+  const pOn2=uPayco[p.id]===true,br=isBrand(p.place_name);
 
-  const revsHtml = revs.map(rv => `
-    <div class="review-item">
-      <div class="review-top">
-        <span class="review-author">👤 ${rv.author} ${"★".repeat(rv.star)}${"☆".repeat(5-rv.star)}</span>
-        <span class="review-date">${rv.date}</span>
-      </div>
-      <div class="review-text">${rv.text}</div>
+  const rvHtml=rv.map(r=>`
+    <div class="rv-card">
+      <div class="rv-top"><span class="rv-who">👤 ${r.author}</span><span class="rv-when">${r.date}</span></div>
+      <div class="rv-stars">${"★".repeat(r.star)}${"☆".repeat(5-r.star)}</div>
+      <div class="rv-body">${r.text}</div>
     </div>`).join("");
 
-  document.getElementById("drawerContent").innerHTML = `
-    <div class="drawer-header">
-      <div style="flex:1;min-width:0;">
-        <div class="drawer-name">${p.place_name} ${payco ? `<span class="payco-chip" style="font-size:11px;vertical-align:middle;">PAYCO</span>` : ""}</div>
-        <div style="color:var(--text-muted);font-size:12px;margin-top:3px;">${catName}${addr ? " · " + addr : ""}</div>
+  document.getElementById("dContent").innerHTML=`
+    <div class="d-close-row"><button class="d-close" onclick="closeDrawer()">✕</button></div>
+    <div class="d-name">${p.place_name}</div>
+    <div class="d-sub">${c}${addr?" · "+addr:""}</div>
+    <div class="d-stats">
+      ${avg?`<div class="d-big-rating">★${avg} <span>/ 5.0 (${rv.length}건)</span></div>`:`<span style="color:var(--text-tertiary);font-size:13px;">리뷰가 없어요</span>`}
+      <div class="d-stat"><label>거리</label>${d}</div>
+      ${p.phone?`<div class="d-stat"><label>전화</label>${p.phone}</div>`:""}
+    </div>
+    <div class="payco-row">
+      <div class="pr-left">
+        <div class="pr-icon">💳</div>
+        <div>
+          <div class="pr-title">PAYCO 식권 사용 가능</div>
+          <div class="pr-desc">${br?"브랜드 가맹점 (자동 인식)":"직접 등록해서 공유해요"}</div>
+        </div>
       </div>
-      <button class="drawer-close" onclick="closeDrawer()">✕</button>
+      ${br?`<div class="brand-badge">가맹점 ✓</div>`:`<button class="pr-toggle ${pOn2?"on":""}" id="pToggle" onclick="tPayco('${p.id}')"></button>`}
     </div>
-    <div class="drawer-info-row">
-      ${avg ? `<div class="drawer-rating-big">★${avg} <span>/ 5.0 (${revs.length}건)</span></div>` : `<div style="color:var(--text-muted);font-size:12px;">아직 리뷰가 없어요</div>`}
-      <div class="info-pill"><label>거리</label>${dist}</div>
-      ${p.phone ? `<div class="info-pill"><label>전화</label>${p.phone}</div>` : ""}
-    </div>
-    <a class="naver-btn" href="https://map.naver.com/v5/search/${encodeURIComponent(p.place_name)}" target="_blank">🗺 네이버 지도에서 보기</a>
-    <div class="section-title">커뮤니티 리뷰 (${revs.length})</div>
-    <div id="revList">${revsHtml || `<div style="color:var(--text-muted);font-size:12px;padding:4px 0 8px;">첫 리뷰를 남겨보세요!</div>`}</div>
-    <div class="write-review">
-      <div class="write-review-title">✍️ 리뷰 남기기</div>
-      <div class="review-input-row"><input type="text" id="reviewAuthor" placeholder="닉네임" maxlength="10" /></div>
-      <div class="star-select" id="starSelect">
+    <a class="naver-link" href="https://map.naver.com/v5/search/${encodeURIComponent(p.place_name)}" target="_blank">🗺 네이버 지도에서 보기</a>
+    <div class="sec-label">리뷰 ${rv.length}개</div>
+    <div>${rvHtml||`<div style="color:var(--text-tertiary);font-size:13px;padding:4px 0 10px;">첫 번째 리뷰를 남겨보세요!</div>`}</div>
+    <div class="write-box">
+      <div class="write-title">✍️ 리뷰 남기기</div>
+      <div class="write-row"><input class="w-input" id="wName" type="text" placeholder="닉네임" maxlength="10" /></div>
+      <div class="star-pick" id="sPick">
         <span onclick="setStar(1)">★</span><span onclick="setStar(2)">★</span><span onclick="setStar(3)">★</span><span onclick="setStar(4)">★</span><span onclick="setStar(5)">★</span>
       </div>
-      <textarea class="review-textarea" id="reviewText" placeholder="솔직한 한마디! (최대 200자)" maxlength="200"></textarea>
-      <button class="review-submit" onclick="submitReview('${p.id}')">등록하기</button>
+      <textarea class="w-ta" id="wText" placeholder="솔직한 한마디를 남겨주세요 (최대 200자)" maxlength="200"></textarea>
+      <button class="w-submit" onclick="submitRv('${p.id}')">등록하기</button>
     </div>`;
 
-  document.getElementById("detailDrawer").classList.add("open");
+  document.getElementById("drawer").classList.add("on");
 }
 
-function closeDrawer() {
-  document.getElementById("detailDrawer").classList.remove("open");
-  selectedPlace = null;
-  document.querySelectorAll(".restaurant-card").forEach(c => c.classList.remove("active"));
+function closeDrawer(){
+  document.getElementById("drawer").classList.remove("on");
+  sel=null;document.querySelectorAll(".place-card").forEach(c=>c.classList.remove("on"));
 }
 
-function setStar(n) {
-  selectedStar = n;
-  document.querySelectorAll("#starSelect span").forEach((s,i) => s.classList.toggle("on", i < n));
+function tPayco(pid){
+  uPayco[pid]=!uPayco[pid];lsS(PK,uPayco);
+  const t=document.getElementById("pToggle");if(t)t.classList.toggle("on",uPayco[pid]);
+  renderCards();renderOv();
 }
 
-function submitReview(pid) {
-  const author = document.getElementById("reviewAuthor").value.trim() || "익명";
-  const text = document.getElementById("reviewText").value.trim();
-  if (!text) { alert("리뷰 내용을 입력해주세요!"); return; }
-  if (!selectedStar) { alert("별점을 선택해주세요!"); return; }
-  if (!allReviews[pid]) allReviews[pid] = [];
-  const now = new Date();
-  allReviews[pid].push({ author, star: selectedStar, text, date: `${now.getMonth()+1}/${now.getDate()}` });
-  saveReviews(allReviews);
-  const p = filteredPlaces.find(x => x.id === pid);
-  if (p) openDrawer(p);
-  renderList();
+function setStar(n){
+  star=n;
+  document.querySelectorAll("#sPick span").forEach((s,i)=>s.classList.toggle("on",i<n));
 }
 
-// ── SEARCH ──
-function doSearch() {
-  const q = document.getElementById("searchInput").value.trim();
-  if (!q) { loadPlaces(); return; }
-  if (isLoading) return;
-  isLoading = true;
-  showLoading(true);
-  allPlaces = [];
-  clearOverlays();
-  let page = 1;
-  function next() {
-    ps.keywordSearch(q, (data, status, pagination) => {
-      if (status === kakao.maps.services.Status.OK) {
-        allPlaces = allPlaces.concat(data);
-        if (pagination.hasNextPage && page < 5) { page++; pagination.nextPage(); }
-        else { isLoading = false; applyFilter(); showLoading(false); }
-      } else { isLoading = false; applyFilter(); showLoading(false); }
-    }, { location: new kakao.maps.LatLng(CENTER_LAT, CENTER_LNG), radius: 1000, sort: kakao.maps.services.SortBy.DISTANCE, page });
+function submitRv(pid){
+  const name=document.getElementById("wName").value.trim()||"익명";
+  const text=document.getElementById("wText").value.trim();
+  if(!text){alert("리뷰를 입력해주세요!");return;}
+  if(!star){alert("별점을 선택해주세요!");return;}
+  if(!uRevs[pid])uRevs[pid]=[];
+  const now=new Date();
+  uRevs[pid].push({author:name,star,text,date:`${now.getMonth()+1}/${now.getDate()}`});
+  lsS(RK,uRevs);
+  const p=filtered.find(x=>x.id===pid);if(p)openDrawer(p);
+  renderCards();
+}
+
+function doSearch(){
+  const q=document.getElementById("sInput").value.trim();
+  if(!q){load();return;}
+  if(busy)return;
+  busy=true;spin(true);places=[];clearOv();
+  const loc=new kakao.maps.LatLng(CX,CY);let pg=1;
+  function next(){
+    ps.keywordSearch(q,(data,status,pag)=>{
+      if(status===kakao.maps.services.Status.OK){
+        places=places.concat(data);
+        if(pag.hasNextPage){pg++;pag.nextPage();}
+        else{busy=false;filter();spin(false);}
+      }else{busy=false;filter();spin(false);}
+    },{location:loc,radius:1000,sort:kakao.maps.services.SortBy.DISTANCE,page:pg});
   }
   next();
 }
 
-document.getElementById("searchInput").addEventListener("keydown", e => { if (e.key === "Enter") doSearch(); });
+document.getElementById("sInput").addEventListener("keydown",e=>{if(e.key==="Enter")doSearch();});
 
-document.getElementById("paycoToggle").addEventListener("click", function() {
-  paycoOnly = !paycoOnly;
-  this.classList.toggle("active", paycoOnly);
-  applyFilter();
-  closeDrawer();
+document.getElementById("paycoBtn").addEventListener("click",function(){
+  pOn=!pOn;this.classList.toggle("active",pOn);filter();closeDrawer();
 });
 
-document.querySelectorAll(".cat-btn").forEach(btn => {
-  btn.addEventListener("click", function() {
-    if (isLoading) return;
-    document.querySelectorAll(".cat-btn").forEach(b => b.classList.remove("active"));
-    this.classList.add("active");
-    currentCat = this.dataset.cat;
-    currentLabel = this.dataset.label;
-    isKeywordCat = !!this.dataset.keyword;
-    document.getElementById("searchInput").value = "";
-    closeDrawer();
-    loadPlaces();
+document.querySelectorAll(".chip").forEach(b=>{
+  b.addEventListener("click",function(){
+    if(busy)return;
+    document.querySelectorAll(".chip").forEach(x=>x.classList.remove("on"));
+    this.classList.add("on");
+    cat=this.dataset.cat;kw=this.dataset.kw==="true";
+    document.getElementById("sInput").value="";
+    closeDrawer();load();
   });
 });
-
-window.onload = initMap;
 </script>
 </body>
 </html>
