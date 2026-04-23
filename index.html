@@ -670,56 +670,6 @@ async function getRecommendation() {
   document.getElementById("recContent").style.display = "block";
 }
 
-  try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 150,
-        messages: [{
-          role: "user",
-          content: `너는 귀엽고 친근한 점심 추천 AI야.
-오늘 추천할 식당: "${picked.place_name}" (${dist} 거리)
-추천 메뉴: "${pickedMenu}"
-
-아래 형식으로만 답해줘 (JSON, 다른 말 없이):
-{
-  "reason": "귀엽고 짧은 추천 이유 1~2문장. 이모지 꼭 포함. 직장인 점심 감성으로."
-}
-
-예시:
-{"reason": "맛있는 점심 먹고 오후에 힘내는 거에요! 오늘도 화이팅 💪😋"}`
-        }]
-      })
-    });
-    const data = await res.json();
-    const text = data.content[0].text;
-    const json = JSON.parse(text.replace(/```json|```/g,"").trim());
-
-    document.getElementById("recTitle").innerHTML =
-      `오늘은 <em>'${picked.place_name}'</em>의 <em>'${pickedMenu}'</em> 어떠세요?`;
-    document.getElementById("recReason").textContent = json.reason;
-
-  } catch(e) {
-    // AI 실패 시 fallback 멘트
-    const fallbacks = [
-      `맛있는 점심 먹고 오후에 힘내는 거예요! 💪😋`,
-      `오늘 이거 안 먹으면 후회할 것 같은 느낌적인 느낌...! 🍽️✨`,
-      `점심은 하루의 반환점! 맛있게 먹고 오후도 달려봐요 🏃‍♀️💨`,
-      `AI가 엄선한 오늘의 추천! 믿고 따라와요 😎🎯`,
-      `배고플 땐 생각이 안 나잖아요. 일단 가요! 🚶‍♂️💨`,
-    ];
-    document.getElementById("recTitle").innerHTML =
-      `오늘은 <em>'${picked.place_name}'</em>의 <em>'${pickedMenu}'</em> 어떠세요?`;
-    document.getElementById("recReason").textContent =
-      fallbacks[Math.floor(Math.random() * fallbacks.length)];
-  }
-
-  document.getElementById("recLoading").style.display = "none";
-  document.getElementById("recContent").style.display = "block";
-}
-
 // 자동 닉네임 생성
 const NICKNAMES = ["구디직장인","점심헌터","밥심충전","배고픈곰","점메추왕","식신","맛집탐정","밥순이","밥돌이","구로미식가","점심요정","배부른돼지","맛있어요","냠냠이","구디밥집"];
 function autoNick() {
