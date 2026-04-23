@@ -619,7 +619,7 @@ window.onload=function(){
     document.getElementById("reSearchBtn").style.display = "block";
   });
 
-  // 지도 클릭 시 해당 위치 근처 장소 검색해서 드로어 표시
+  // 지도 빈 곳 클릭 시 드로어 닫기
   kakao.maps.event.addListener(map, 'click', function(mouseEvent) {
     const latlng = mouseEvent.latLng;
     const clickPs = new kakao.maps.services.Places();
@@ -646,6 +646,9 @@ window.onload=function(){
           sel = found;
           openDrawer(found);
           map.panTo(new kakao.maps.LatLng(found.y, found.x));
+        } else {
+          // 근처에 장소 없으면 드로어 닫기
+          closeDrawer();
         }
       }, { location: latlng, radius: 50, sort: kakao.maps.services.SortBy.DISTANCE });
     }, { location: latlng, radius: 50, sort: kakao.maps.services.SortBy.DISTANCE });
