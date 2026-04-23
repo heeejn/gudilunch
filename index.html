@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>구디 점메추</title>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet" />
-  <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=e6a5066c0e33bfb365feae38e3ef31f4&libraries=services&autoload=false"></script>
+  <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=e6a5066c0e33bfb365feae38e3ef31f4&libraries=services"></script>
   <style>
     :root {
       --bg: #F2F4F6;
@@ -548,7 +548,8 @@ let map,ps,ovs=[],places=[],filtered=[],sel=null,star=0,pOn=false,cat="FD6",kw=f
 
 let lastCenter = null;
 
-kakao.maps.load(()=>{
+window.onload=function(){
+  if(typeof kakao === 'undefined') { setTimeout(window.onload, 100); return; }
   map=new kakao.maps.Map(document.getElementById("map"),{center:new kakao.maps.LatLng(CX,CY),level:4});
   ps=new kakao.maps.services.Places();
 
