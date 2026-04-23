@@ -555,13 +555,9 @@ window.onload=()=>{
   lastCenter = new kakao.maps.LatLng(CX, CY);
   load();
 
-  // 지도 드래그 시 150m 이상 이동했을 때 버튼 표시
-  kakao.maps.event.addListener(map, 'dragend', function() {
-    const cur = map.getCenter();
-    const dist = getDistanceM(lastCenter.getLat(), lastCenter.getLng(), cur.getLat(), cur.getLng());
-    if (dist > 150) {
-      document.getElementById("reSearchBtn").style.display = "block";
-    }
+  // 드래그하면 바로 버튼 표시
+  kakao.maps.event.addListener(map, 'dragstart', function() {
+    document.getElementById("reSearchBtn").style.display = "block";
   });
 };
 
@@ -674,12 +670,6 @@ const NICKNAMES = ["구디직장인","점심헌터","밥심충전","배고픈곰
 function autoNick() {
   return NICKNAMES[Math.floor(Math.random()*NICKNAMES.length)] + Math.floor(Math.random()*99+1);
 }
-function getDistanceM(lat1,lng1,lat2,lng2){
-  const R=6371000, dLat=(lat2-lat1)*Math.PI/180, dLng=(lng2-lng1)*Math.PI/180;
-  const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
-  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-}
-
 function reSearchHere(){
   document.getElementById("reSearchBtn").style.display = "none";
   const center = map.getCenter();
