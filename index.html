@@ -559,6 +559,38 @@ window.onload=()=>{
   kakao.maps.event.addListener(map, 'dragstart', function() {
     document.getElementById("reSearchBtn").style.display = "block";
   });
+
+  // 지도 클릭 시 해당 위치 근처 장소 검색해서 드로어 표시
+  kakao.maps.event.addListener(map, 'click', function(mouseEvent) {
+    const latlng = mouseEvent.latLng;
+    const clickPs = new kakao.maps.services.Places();
+
+    function findClosest(data) {
+      let closest = null, minDist = Infinity;
+      data.forEach(p => {
+        const dx = parseFloat(p.x) - latlng.getLng();
+        const dy = parseFloat(p.y) - latlng.getLat();
+        const d = Math.sqrt(dx*dx + dy*dy);
+        if (d < minDist) { minDist = d; closest = p; }
+      });
+      return minDist < 0.0005 ? closest : null;
+    }
+
+    // 음식점 먼저 검색
+    clickPs.categorySearch('FD6', function(data1, status1) {
+      const found1 = status1 === kakao.maps.services.Status.OK ? findClosest(data1) : null;
+      // 카페도 검색
+      clickPs.categorySearch('CE7', function(data2, status2) {
+        const found2 = status2 === kakao.maps.services.Status.OK ? findClosest(data2) : null;
+        const found = found1 || found2;
+        if (found) {
+          sel = found;
+          openDrawer(found);
+          map.panTo(new kakao.maps.LatLng(found.y, found.x));
+        }
+      }, { location: latlng, radius: 50, sort: kakao.maps.services.SortBy.DISTANCE });
+    }, { location: latlng, radius: 50, sort: kakao.maps.services.SortBy.DISTANCE });
+  });
 };
 
 // ── 오늘의 추천 ──
