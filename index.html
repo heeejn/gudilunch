@@ -620,9 +620,8 @@ window.onload=function(){
     closeDrawer();
   });
 
-  // 지도 클릭 시 즉시 드로어 닫고, 근처 장소 있으면 다시 열기
+  // 지도 클릭 시 - 정확한 위치 클릭해야만 장소 정보 표시, 빈 곳은 드로어 닫기
   kakao.maps.event.addListener(map, 'click', function(mouseEvent) {
-    closeDrawer();
     const latlng = mouseEvent.latLng;
     const clickPs = new kakao.maps.services.Places();
 
@@ -634,7 +633,7 @@ window.onload=function(){
         const d = Math.sqrt(dx*dx + dy*dy);
         if (d < minDist) { minDist = d; closest = p; }
       });
-      return minDist < 0.0005 ? closest : null;
+      return minDist < 0.00015 ? closest : null; // 약 15m 이내만
     }
 
     clickPs.categorySearch('FD6', function(data1, status1) {
@@ -646,9 +645,11 @@ window.onload=function(){
           sel = found;
           openDrawer(found);
           map.panTo(new kakao.maps.LatLng(found.y, found.x));
+        } else {
+          closeDrawer();
         }
-      }, { location: latlng, radius: 50, sort: kakao.maps.services.SortBy.DISTANCE });
-    }, { location: latlng, radius: 50, sort: kakao.maps.services.SortBy.DISTANCE });
+      }, { location: latlng, radius: 20, sort: kakao.maps.services.SortBy.DISTANCE });
+    }, { location: latlng, radius: 20, sort: kakao.maps.services.SortBy.DISTANCE });
   });
 };
 
