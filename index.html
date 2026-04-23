@@ -538,11 +538,63 @@ const NHN_ADDR = "서울특별시 구로구 디지털로26길 72";
 // NHN KCP 정확한 좌표 (구글맵 확인)
 let CX = 37.4808, CY = 126.8937;
 
-const PK="gdpm_payco_v1", RK="gdpm_rv_v1";
-const lsG=k=>{try{return JSON.parse(localStorage.getItem(k)||"{}")}catch{return{}}};
-const lsS=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}};
-let uPayco=lsG(PK), uRevs=lsG(RK);
-const isPayco=p=>uPayco[p.id]===true;
+// ── Supabase 설정 ──
+const SB_URL = "https://jioytxfvwibileewqkbz.supabase.co";
+const SB_KEY = "sb_publishable_2YREMM4-rc3nmn9iNPjdSw_B8eep4k7";
+const sbFetch = (path, opts={}) => fetch(`${SB_URL}/rest/v1/${path}`, {
+  ...opts,
+  headers: {
+    "apikey": SB_KEY,
+    "Authorization": `Bearer ${SB_KEY}`,
+    "Content-Type": "application/json",
+    "Prefer": opts.prefer || "",
+    ...(opts.headers||{})
+  }
+});
+
+// 페이코 데이터 (공유)
+let uPayco = {};
+async function loadPaycoFromDB() {
+  try {
+    const res = await sbFetch("payco?select=place_id,enabled");
+    const data = await res.json();
+    uPayco = {};
+    data.forEach(r => { uPayco[r.place_id] = r.enabled; });
+  } catch(e) { uPayco = {}; }
+}
+async function setPaycoDB(placeId, enabled) {
+  await sbFetch("payco", {
+    method: "POST",
+    prefer: "resolution=merge-duplicates",
+    headers: { "Prefer": "resolution=merge-duplicates" },
+    body: JSON.stringify({ place_id: placeId, enabled })
+  });
+  uPayco[placeId] = enabled;
+}
+
+// 리뷰 데이터 (공유)
+let uRevs = {};
+async function loadReviewsFromDB() {
+  try {
+    const res = await sbFetch("reviews?select=*&order=created_at.asc");
+    const data = await res.json();
+    uRevs = {};
+    data.forEach(r => {
+      if (!uRevs[r.place_id]) uRevs[r.place_id] = [];
+      uRevs[r.place_id].push({ author: r.author, star: r.star, text: r.text, date: r.date });
+    });
+  } catch(e) { uRevs = {}; }
+}
+async function addReviewToDB(placeId, placeName, author, star, text, date) {
+  await sbFetch("reviews", {
+    method: "POST",
+    body: JSON.stringify({ place_id: placeId, place_name: placeName, author, star, text, date })
+  });
+  if (!uRevs[placeId]) uRevs[placeId] = [];
+  uRevs[placeId].push({ author, star, text, date });
+}
+
+const isPayco = p => uPayco[p.id] === true;
 
 let map,ps,ovs=[],places=[],filtered=[],sel=null,star=0,pOn=false,cat="FD6",kw=false,busy=false;
 
@@ -556,7 +608,11 @@ window.onload=function(){
   ps=new kakao.maps.services.Places();
 
   lastCenter = new kakao.maps.LatLng(CX, CY);
-  load();
+
+  // DB에서 공유 데이터 먼저 로드
+  Promise.all([loadPaycoFromDB(), loadReviewsFromDB()]).then(() => {
+    load();
+  });
 
   // 드래그하면 바로 버튼 표시
   kakao.maps.event.addListener(map, 'dragstart', function() {
@@ -829,9 +885,11 @@ function closeDrawer(){
   sel=null;document.querySelectorAll(".place-card").forEach(c=>c.classList.remove("on"));
 }
 
-function tPayco(pid){
-  uPayco[pid]=!uPayco[pid];lsS(PK,uPayco);
-  const t=document.getElementById("pToggle");if(t)t.classList.toggle("on",uPayco[pid]);
+async function tPayco(pid){
+  const newVal = !uPayco[pid];
+  await setPaycoDB(pid, newVal);
+  const t=document.getElementById("pToggle");
+  if(t) t.classList.toggle("on", newVal);
   renderCards();renderOv();
 }
 
@@ -840,16 +898,19 @@ function setStar(n){
   document.querySelectorAll("#sPick span").forEach((s,i)=>s.classList.toggle("on",i<n));
 }
 
-function submitRv(pid){
+async function submitRv(pid){
   const name = autoNick();
-  const text=document.getElementById("wText").value.trim();
+  const text = document.getElementById("wText").value.trim();
   if(!text){alert("리뷰를 입력해주세요!");return;}
   if(!star){alert("별점을 선택해주세요!");return;}
-  if(!uRevs[pid])uRevs[pid]=[];
-  const now=new Date();
-  uRevs[pid].push({author:name,star,text,date:`${now.getMonth()+1}/${now.getDate()}`});
-  lsS(RK,uRevs);
-  const p=filtered.find(x=>x.id===pid);if(p)openDrawer(p);
+  const now = new Date();
+  const date = `${now.getMonth()+1}/${now.getDate()}`;
+  const placeName = sel ? sel.place_name : "";
+  const btn = document.querySelector(".w-submit");
+  if(btn){ btn.textContent = "저장 중..."; btn.disabled = true; }
+  await addReviewToDB(pid, placeName, name, star, text, date);
+  const p = filtered.find(x=>x.id===pid);
+  if(p) openDrawer(p);
   renderCards();
 }
 
