@@ -599,33 +599,6 @@ window.onload=function(){
 // ── 오늘의 추천 ──
 const REC_KEY = "gdpm_rec_v1";
 
-function getMenuForPlace(place) {
-  const cat = place.category_name || "";
-  const name = place.place_name || "";
-  // 가게 이름 기반 정밀 매칭
-  if (name.includes("맥도날드")) return ["빅맥","상하이버거","필레오피쉬","맥스파이시버거"];
-  if (name.includes("버거킹")) return ["와퍼","더블와퍼","치킨버거","새우버거"];
-  if (name.includes("롯데리아")) return ["새우버거","불고기버거","데리버거","치킨버거"];
-  if (name.includes("KFC")) return ["오리지날치킨","징거버거","타워버거","치킨박스"];
-  if (name.includes("맘스터치")) return ["싸이버거","불싸이버거","치킨버거","핫도그"];
-  if (name.includes("서브웨이")) return ["에그마요","BLT","스테이크","터키베이컨"];
-  if (name.includes("스타벅스")||name.includes("이디야")||name.includes("투썸")||name.includes("메가")||name.includes("컴포즈")||name.includes("빽다방")) return ["아메리카노","카페라떼","카푸치노","플랫화이트","에스프레소"];
-  if (name.includes("한솥")) return ["제육볶음도시락","닭갈비도시락","불고기도시락","돈까스도시락"];
-  if (name.includes("홍콩반점")) return ["짜장면","짬뽕","탕수육","볶음밥"];
-  if (name.includes("굽네")||name.includes("BBQ")||name.includes("BHC")||name.includes("교촌")) return ["후라이드","양념치킨","간장치킨","반반치킨"];
-  if (name.includes("도미노")||name.includes("피자헛")||name.includes("파파존스")) return ["페퍼로니피자","불고기피자","콤비네이션","치즈피자"];
-  // 카테고리 기반 매칭
-  if (cat.includes("한식")) return ["김치찌개","된장찌개","비빔밥","제육볶음","순두부찌개","갈비탕","불고기","냉면"];
-  if (cat.includes("일식")) return ["라멘","돈카츠","초밥","우동","가츠동","연어덮밥","규동"];
-  if (cat.includes("중식")) return ["짜장면","짬뽕","탕수육","마파두부","볶음밥","마라탕"];
-  if (cat.includes("양식")||cat.includes("패스트푸드")) return ["파스타","스테이크","리조또","버거","크림수프"];
-  if (cat.includes("분식")) return ["떡볶이","순대","라볶이","김밥","튀김","치즈볶이"];
-  if (cat.includes("카페")||cat.includes("커피")) return ["아메리카노","카페라떼","카푸치노","에이드"];
-  if (cat.includes("치킨")) return ["후라이드","양념치킨","간장치킨","반반치킨"];
-  if (cat.includes("고기")||cat.includes("육류")) return ["삼겹살","목살","갈비","항정살","차돌박이"];
-  return ["점심 정식","오늘의 메뉴","런치 세트"];
-}
-
 async function getRecommendation() {
   document.getElementById("recLoading").style.display = "flex";
   document.getElementById("recContent").style.display = "none";
@@ -646,9 +619,56 @@ async function getRecommendation() {
   }
 
   const picked = pool[Math.floor(Math.random() * pool.length)];
-  const menuList = getMenuForPlace(picked);
-  const pickedMenu = menuList[Math.floor(Math.random() * menuList.length)];
   const dist = picked.distance ? `${picked.distance}m` : "근처";
+  const cat = picked.category_name ? picked.category_name.split(">").pop().trim() : "";
+
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 150,
+        messages: [{
+          role: "user",
+          content: `너는 귀엽고 친근한 점심 추천 AI야.
+오늘 추천할 식당: "${picked.place_name}" (${cat}, ${dist} 거리)
+
+아래 형식으로만 답해줘 (JSON, 다른 말 없이):
+{
+  "reason": "귀엽고 짧은 추천 이유 1~2문장. 이모지 꼭 포함. 직장인 점심 감성으로."
+}
+
+예시:
+{"reason": "맛있는 점심 먹고 오후에 힘내는 거에요! 오늘도 화이팅 💪😋"}`
+        }]
+      })
+    });
+    const data = await res.json();
+    const text = data.content[0].text;
+    const json = JSON.parse(text.replace(/```json|```/g,"").trim());
+
+    document.getElementById("recTitle").innerHTML =
+      `오늘은 <em>'${picked.place_name}'</em> 어떠세요?`;
+    document.getElementById("recReason").textContent = json.reason;
+
+  } catch(e) {
+    const fallbacks = [
+      `맛있는 점심 먹고 오후에 힘내는 거예요! 💪😋`,
+      `오늘 이거 안 가면 후회할 것 같은 느낌적인 느낌...! 🍽️✨`,
+      `점심은 하루의 반환점! 맛있게 먹고 오후도 달려봐요 🏃‍♀️💨`,
+      `AI가 엄선한 오늘의 추천! 믿고 따라가요 😎🎯`,
+      `배고플 땐 생각이 안 나잖아요. 일단 가요! 🚶‍♂️💨`,
+    ];
+    document.getElementById("recTitle").innerHTML =
+      `오늘은 <em>'${picked.place_name}'</em> 어떠세요?`;
+    document.getElementById("recReason").textContent =
+      fallbacks[Math.floor(Math.random() * fallbacks.length)];
+  }
+
+  document.getElementById("recLoading").style.display = "none";
+  document.getElementById("recContent").style.display = "block";
+}
 
   try {
     const res = await fetch("https://api.anthropic.com/v1/messages", {
