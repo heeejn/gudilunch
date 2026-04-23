@@ -614,13 +614,15 @@ window.onload=function(){
     load();
   });
 
-  // 드래그하면 바로 버튼 표시
+  // 드래그하면 버튼 표시 + 드로어 닫기
   kakao.maps.event.addListener(map, 'dragstart', function() {
     document.getElementById("reSearchBtn").style.display = "block";
+    closeDrawer();
   });
 
-  // 지도 빈 곳 클릭 시 드로어 닫기
+  // 지도 클릭 시 즉시 드로어 닫고, 근처 장소 있으면 다시 열기
   kakao.maps.event.addListener(map, 'click', function(mouseEvent) {
+    closeDrawer();
     const latlng = mouseEvent.latLng;
     const clickPs = new kakao.maps.services.Places();
 
@@ -635,10 +637,8 @@ window.onload=function(){
       return minDist < 0.0005 ? closest : null;
     }
 
-    // 음식점 먼저 검색
     clickPs.categorySearch('FD6', function(data1, status1) {
       const found1 = status1 === kakao.maps.services.Status.OK ? findClosest(data1) : null;
-      // 카페도 검색
       clickPs.categorySearch('CE7', function(data2, status2) {
         const found2 = status2 === kakao.maps.services.Status.OK ? findClosest(data2) : null;
         const found = found1 || found2;
@@ -646,9 +646,6 @@ window.onload=function(){
           sel = found;
           openDrawer(found);
           map.panTo(new kakao.maps.LatLng(found.y, found.x));
-        } else {
-          // 근처에 장소 없으면 드로어 닫기
-          closeDrawer();
         }
       }, { location: latlng, radius: 50, sort: kakao.maps.services.SortBy.DISTANCE });
     }, { location: latlng, radius: 50, sort: kakao.maps.services.SortBy.DISTANCE });
