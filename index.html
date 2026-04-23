@@ -546,20 +546,20 @@ const isPayco=p=>uPayco[p.id]===true;
 
 let map,ps,ovs=[],places=[],filtered=[],sel=null,star=0,pOn=false,cat="FD6",kw=false,busy=false;
 
+let lastCenter = null;
+
 window.onload=()=>{
   map=new kakao.maps.Map(document.getElementById("map"),{center:new kakao.maps.LatLng(CX,CY),level:4});
   ps=new kakao.maps.services.Places();
 
-  // NHN KCP 마커 제거됨
+  lastCenter = new kakao.maps.LatLng(CX, CY);
   load();
 
-  let lastCenter = new kakao.maps.LatLng(CX, CY);
-
-  // 지도 드래그 시 일정 거리 이상 이동했을 때만 버튼 표시
+  // 지도 드래그 시 150m 이상 이동했을 때 버튼 표시
   kakao.maps.event.addListener(map, 'dragend', function() {
     const cur = map.getCenter();
     const dist = getDistanceM(lastCenter.getLat(), lastCenter.getLng(), cur.getLat(), cur.getLng());
-    if (dist > 300) { // 300m 이상 이동시에만 버튼 표시
+    if (dist > 150) {
       document.getElementById("reSearchBtn").style.display = "block";
     }
   });
@@ -685,8 +685,7 @@ function reSearchHere(){
   const center = map.getCenter();
   CX = center.getLat();
   CY = center.getLng();
-  // lastCenter 업데이트
-  if(typeof lastCenter !== 'undefined') lastCenter = center;
+  lastCenter = center;
   closeDrawer();
   load();
 }
