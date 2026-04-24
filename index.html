@@ -423,24 +423,25 @@
     .fab {
       display: none;
       position: fixed;
-      right: 16px;
-      z-index: 250;
-      width: 52px; height: 52px;
+      right: 20px;
+      z-index: 500;
+      width: 56px; height: 56px;
       border-radius: 50%;
       border: none;
       background: var(--blue);
       color: white;
       font-size: 22px;
       font-weight: 700;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
       cursor: pointer;
       align-items: center;
       justify-content: center;
-      transition: background 0.15s, bottom 0.3s cubic-bezier(0.32,0.72,0,1);
       -webkit-tap-highlight-color: transparent;
       touch-action: manipulation;
+      /* iOS safe area 대응 */
+      padding-bottom: env(safe-area-inset-bottom, 0px);
     }
-    .fab:active { transform: scale(0.92); }
+    .fab:active { opacity: 0.8; }
 
     @media (max-width:768px) {
       /* 검색 버튼 */
@@ -1076,43 +1077,43 @@ var _fabSheet = null;
 var _fabBtn = null;
 
 function _fabInit(){
+  if(!window.matchMedia('(max-width:768px)').matches) return;
+
   _fabSheet = document.getElementById('sheet');
   _fabBtn = document.getElementById('fabBtn');
   if(!_fabSheet || !_fabBtn) return;
 
-  // 3단계 높이
   var vh = window.innerHeight;
-  var H = { half: Math.round(vh*0.5), full: Math.round(vh*0.88), hidden: 0 };
-  var ICONS = { half: '↑', full: '🗺', hidden: '☰' };
-  var LABELS = { half: '전체보기', full: '지도만', hidden: '목록보기' };
+  var H = { hidden: 0, half: Math.round(vh*0.48), full: Math.round(vh*0.88) };
+  var ICONS  = { hidden: '☰', half: '↑', full: '🗺' };
+  var LABELS = { hidden: '목록 보기', half: '전체 보기', full: '지도만 보기' };
 
   function applyState(state){
     _fabState = state;
     _fabSheet.style.height = H[state] + 'px';
-    _fabSheet.style.overflow = 'hidden';
-    // FAB 위치: 시트 바로 위 16px
-    var sheetH = state === 'hidden' ? 0 : H[state];
-    _fabBtn.style.bottom = (sheetH + 16) + 'px';
+    _fabSheet.style.overflow = state === 'hidden' ? 'hidden' : '';
+    // FAB: 시트 위 20px, z-index 높게
+    _fabBtn.style.bottom = (H[state] + 20) + 'px';
+    _fabBtn.style.zIndex = '500';
     _fabBtn.textContent = ICONS[state];
     _fabBtn.title = LABELS[state];
   }
 
-  // 클릭: half → full → hidden → half 순환
   window.fabTap = function(){
-    var next = _fabState==='half' ? 'full' : _fabState==='full' ? 'hidden' : 'half';
+    var next = _fabState==='hidden' ? 'half'
+             : _fabState==='half'   ? 'full'
+             : 'hidden';
     applyState(next);
   };
 
-  // 식당 클릭 시 숨김이면 half로 복원
   window.sheetSetState = function(s){
     if(s==='default' && _fabState==='hidden') applyState('half');
   };
 
-  // 초기 설정
-  applyState('half');
+  // 첫 진입: 지도만 보이게
+  applyState('hidden');
 }
 
-// DOM 로드 완료 후 실행
 if(document.readyState === 'loading'){
   document.addEventListener('DOMContentLoaded', _fabInit);
 } else {
