@@ -419,29 +419,20 @@
     ::-webkit-scrollbar { width:4px; }
     ::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
 
-    /* FAB 플로팅 버튼 */
-    .fab {
+    /* 바텀시트 핸들 */
+    .mob-handle {
       display: none;
-      position: fixed;
-      right: 20px;
-      z-index: 500;
-      width: 56px; height: 56px;
-      border-radius: 50%;
-      border: none;
-      background: var(--blue);
-      color: white;
-      font-size: 22px;
-      font-weight: 700;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-      cursor: pointer;
-      align-items: center;
       justify-content: center;
-      -webkit-tap-highlight-color: transparent;
-      touch-action: manipulation;
-      /* iOS safe area 대응 */
-      padding-bottom: env(safe-area-inset-bottom, 0px);
+      padding: 12px 0 8px;
+      cursor: pointer;
+      flex-shrink: 0;
+      user-select: none;
+      -webkit-user-select: none;
     }
-    .fab:active { opacity: 0.8; }
+    .mob-handle-bar {
+      width: 40px; height: 4px;
+      background: #D1D5DB; border-radius: 2px;
+    }
 
     @media (max-width:768px) {
       /* 검색 버튼 */
@@ -461,9 +452,11 @@
         position: absolute !important;
         inset: 0; height: 100% !important; overflow: hidden;
       }
-      #reSearchBtn { z-index: 160 !important; }
 
-      /* 바텀시트: 처음부터 height:0 숨김 */
+      /* 현 지도 검색: 바텀시트 위 */
+      #reSearchBtn { z-index: 200 !important; }
+
+      /* 바텀시트: CSS에서 초기 절반 높이 */
       .left {
         position: absolute;
         bottom: 0; left: 0; right: 0;
@@ -474,22 +467,64 @@
         border-right: none;
         display: flex; flex-direction: column;
         overflow: hidden;
-        height: 0;
+        height: 48vh;
         transition: height 0.3s cubic-bezier(0.32,0.72,0,1);
       }
+
+      /* 상태 클래스 */
+      .left.s-full   { height: 88vh; }
+      .left.s-hidden { height: 0px; }
+
+      /* 핸들바 */
+      .mob-handle { display: flex !important; }
 
       .search-zone,.rec-card,.res-bar { flex-shrink: 0; }
       .card-list {
         flex: 1; overflow-y: auto;
         -webkit-overflow-scrolling: touch;
-        min-height: 0; padding-bottom: 20px;
+        min-height: 0; padding-bottom: 80px;
       }
-      /* FAB: 처음부터 하단 20px에 고정 */
-      .fab { display: flex; bottom: 20px !important; }
-      .drawer { left: 0; max-height: 80vh; z-index: 300; }
+
+      /* FAB 버튼 */
+      .mob-fab {
+        display: flex !important;
+        position: fixed;
+        right: 16px; bottom: 16px;
+        z-index: 400;
+        width: 52px; height: 52px;
+        border-radius: 50%; border: none;
+        background: var(--blue); color: white;
+        font-size: 18px; font-weight: 700;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+        cursor: pointer;
+        align-items: center; justify-content: center;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+        transition: bottom 0.3s cubic-bezier(0.32,0.72,0,1);
+      }
+
+      .drawer { left: 0; max-height: 85vh; z-index: 500; }
     }
+
+    /* 모바일 핸들바 */
+    .mob-handle {
+      display: none;
+      justify-content: center; align-items: center;
+      padding: 12px 0 8px; flex-shrink: 0;
+      cursor: pointer; user-select: none;
+      -webkit-user-select: none;
+    }
+    .mob-handle-bar {
+      width: 36px; height: 4px;
+      background: #D1D5DB; border-radius: 2px;
+    }
+
+    /* FAB: 기본 숨김 */
+    .mob-fab { display: none; }
+
     /* 터치 딜레이 제거 */
     * { touch-action: manipulation; }
+    button, a, [onclick] { -webkit-tap-highlight-color: transparent; }
     button, a, [onclick] { -webkit-tap-highlight-color: transparent; }
   </style>
 </head>
@@ -511,6 +546,7 @@
 
 <div class="layout">
   <div class="left" id="sheet">
+    <div class="mob-handle" id="mobHandle" onclick="sheetCycle()"><div class="mob-handle-bar"></div></div>
     <div class="search-zone">
       <div class="search-row">
         <div class="search-field">
@@ -601,8 +637,8 @@
   </div>
 </div>
 
-<!-- FAB 버튼 -->
-<button class="fab" id="fabBtn" onclick="fabTap()">☰</button>
+<!-- 모바일 FAB -->
+<button class="mob-fab" id="mobFab" onclick="sheetCycle()">☰</button>
 
 <script>
 const NHN_ADDR = "서울특별시 구로구 디지털로26길 72";
@@ -703,6 +739,7 @@ window.onload=function(){
 
   // 지도 클릭 시 - 정확한 위치 클릭해야만 장소 정보 표시, 빈 곳은 드로어 닫기
   kakao.maps.event.addListener(map, 'click', function(mouseEvent) {
+    if(_justPicked) return; // 마커 클릭 직후면 무시
     const latlng = mouseEvent.latLng;
     const clickPs = new kakao.maps.services.Places();
 
@@ -714,12 +751,14 @@ window.onload=function(){
         const d = Math.sqrt(dx*dx + dy*dy);
         if (d < minDist) { minDist = d; closest = p; }
       });
-      return minDist < 0.00015 ? closest : null; // 약 15m 이내만
+      return minDist < 0.00015 ? closest : null;
     }
 
     clickPs.categorySearch('FD6', function(data1, status1) {
+      if(_justPicked) return;
       const found1 = status1 === kakao.maps.services.Status.OK ? findClosest(data1) : null;
       clickPs.categorySearch('CE7', function(data2, status2) {
+        if(_justPicked) return;
         const found2 = status2 === kakao.maps.services.Status.OK ? findClosest(data2) : null;
         const found = found1 || found2;
         if (found) {
@@ -929,19 +968,20 @@ function renderOv(){
   });
 }
 
+var _justPicked = false;
 function pick(id){
   const p=filtered.find(x=>x.id===id);if(!p)return;
   sel=p;
+  // 마커 클릭 → 지도 click 이벤트 버블링 방지
+  _justPicked = true;
+  setTimeout(()=>{ _justPicked=false; }, 600);
   document.querySelectorAll(".place-card").forEach(c=>c.classList.remove("on"));
   const card=document.getElementById(`c-${id}`);
   if(card){card.classList.add("on");card.scrollIntoView({behavior:"smooth",block:"nearest"});}
   map.panTo(new kakao.maps.LatLng(p.y,p.x));
-  renderOv(); // 선택 마커 강조
+  renderOv();
   openDrawer(p);
-  // 모바일: 시트가 숨겨져 있으면 기본 높이로 복원
-  if(window.innerWidth<=768){
-    sheetSetState('default');
-  }
+  sheetSetState('default');
 }
 
 function openDrawer(p){
@@ -1073,53 +1113,59 @@ document.getElementById("sInput").addEventListener("keydown",e=>{if(e.key==="Ent
 // 줌 변경 시 마커 재렌더 (이름 ↔ 핀 전환)
 kakao.maps.event.addListener(map,'zoom_changed',()=>renderOv());
 
-// ── FAB 버튼으로 시트 제어 ──────────────────────────────
-var _fabState = 'half';
-var _fabSheet = null;
-var _fabBtn = null;
+// ── 모바일 시트 제어 ──────────────────────────────────
+var mobSheet = null;
+var mobFab   = null;
+var mobState = 'default'; // default | full | hidden
 
-function _fabInit(){
-  if(!window.matchMedia('(max-width:768px)').matches) return;
+var SHEET_STATES = ['default','full','hidden'];
+var SHEET_ICONS  = { default:'↑', full:'🗺', hidden:'☰' };
+var SHEET_LABELS = { default:'전체 보기', full:'지도만 보기', hidden:'목록 보기' };
 
-  _fabSheet = document.getElementById('sheet');
-  _fabBtn   = document.getElementById('fabBtn');
-  if(!_fabSheet || !_fabBtn) return;
+function sheetApply(state){
+  if(!mobSheet || !mobFab) return;
+  mobState = state;
 
+  // CSS 클래스로 높이 제어 (transition 적용됨)
+  mobSheet.classList.remove('s-full','s-hidden');
+  if(state === 'full')   mobSheet.classList.add('s-full');
+  if(state === 'hidden') mobSheet.classList.add('s-hidden');
+
+  // FAB 위치: 시트 위로
+  var sheetH = mobSheet.offsetHeight;
+  // offsetHeight는 transition 전 값이므로 CSS 값으로 직접 계산
   var vh = window.innerHeight;
-  var H = { hidden: 0, half: Math.round(vh*0.48), full: Math.round(vh*0.86) };
-  var ICONS  = { hidden: '☰ 목록', half: '↑ 전체', full: '🗺 지도' };
-
-  function applyState(state){
-    _fabState = state;
-    // 높이 직접 지정 (CSS transition이 걸림)
-    _fabSheet.style.height = H[state] + 'px';
-    // FAB 위치: 시트 높이 + 여백 (CSS !important 없이 JS로 직접)
-    _fabBtn.style.setProperty('bottom', (H[state] + 24) + 'px', 'important');
-    _fabBtn.textContent = ICONS[state];
-  }
-
-  window.fabTap = function(){
-    var next = _fabState==='hidden' ? 'half'
-             : _fabState==='half'   ? 'full'
-             : 'hidden';
-    applyState(next);
-  };
-
-  window.sheetSetState = function(s){
-    if(s==='default' && _fabState==='hidden') applyState('half');
-  };
-
-  // 초기: 지도만 (height:0은 CSS에서 이미 설정됨)
-  _fabState = 'hidden';
-  _fabBtn.style.setProperty('bottom', '24px', 'important');
-  _fabBtn.textContent = ICONS['hidden'];
+  var targetH = state==='full' ? Math.round(vh*0.88)
+              : state==='hidden' ? 0
+              : Math.round(vh*0.48);
+  mobFab.style.bottom = (targetH + 16) + 'px';
+  mobFab.textContent  = SHEET_ICONS[state];
+  mobFab.title        = SHEET_LABELS[state];
 }
 
-if(document.readyState === 'loading'){
-  document.addEventListener('DOMContentLoaded', _fabInit);
-} else {
-  _fabInit();
-}
+// 핸들/FAB 클릭 시 순환: default → full → hidden → default
+window.sheetCycle = function(){
+  var next = mobState==='default' ? 'full'
+           : mobState==='full'    ? 'hidden'
+           : 'default';
+  sheetApply(next);
+};
+
+// 식당 클릭 시 숨겨진 상태면 기본으로 복원
+window.sheetSetState = function(s){
+  if(!window.matchMedia('(max-width:768px)').matches) return;
+  if(s==='default' && mobState==='hidden') sheetApply('default');
+};
+
+// 모바일에서만 초기화
+(function initMob(){
+  if(!window.matchMedia('(max-width:768px)').matches) return;
+  mobSheet = document.getElementById('sheet');
+  mobFab   = document.getElementById('mobFab');
+  if(!mobSheet || !mobFab) return;
+  // 초기 상태: 절반 보기
+  sheetApply('default');
+})();
 
 document.getElementById("paycoBtn").addEventListener("click",function(){
   pOn=!pOn;this.classList.toggle("active",pOn);filter();closeDrawer();
