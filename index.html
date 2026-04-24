@@ -419,35 +419,34 @@
     ::-webkit-scrollbar { width:4px; }
     ::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
 
-    /* ── 모바일 핸들 ── */
+    /* 바텀시트 핸들 */
     .mob-handle {
       display: none;
       justify-content: center;
-      align-items: center;
-      padding: 10px 0 6px;
+      padding: 12px 0 8px;
       cursor: pointer;
       flex-shrink: 0;
       user-select: none;
+      -webkit-user-select: none;
     }
     .mob-handle-bar {
-      width: 36px; height: 4px;
-      background: var(--border); border-radius: 2px;
+      width: 40px; height: 4px;
+      background: #D1D5DB; border-radius: 2px;
     }
 
-    @media (max-width: 768px) {
-      /* 검색 버튼 깨짐 수정 */
+    @media (max-width:768px) {
+      /* 검색 버튼 */
       .search-go {
-        padding: 0 12px;
+        padding: 0 14px;
         font-size: 13px;
         height: 40px;
         white-space: nowrap;
         flex-shrink: 0;
-        min-width: 48px;
       }
-      .search-field { min-width: 0; }
+      .search-row { gap: 6px; }
       .search-field input { font-size: 13px; }
 
-      /* 레이아웃: 지도 전체화면 */
+      /* 레이아웃: 지도 풀스크린 */
       .layout {
         display: block;
         position: relative;
@@ -459,31 +458,31 @@
         height: 100% !important;
         overflow: hidden;
       }
+      /* 현 지도 검색 버튼: 바텀시트 위에 보이게 z-index 높임 */
+      #reSearchBtn { z-index: 160 !important; }
 
-      /* 바텀시트 3단계 */
+      /* 바텀시트 */
       .left {
         position: absolute;
         bottom: 0; left: 0; right: 0;
         z-index: 150;
         background: var(--white);
         border-radius: 20px 20px 0 0;
-        box-shadow: 0 -4px 24px rgba(0,0,0,0.12);
+        box-shadow: 0 -4px 24px rgba(0,0,0,0.13);
         border-right: none;
         display: flex;
         flex-direction: column;
         overflow: hidden;
         height: 46vh;
+        /* 트랜지션 없음 - 스와이프 중 부드럽게 */
+        will-change: height;
+      }
+      .left.sheet-animating {
         transition: height 0.32s cubic-bezier(0.32,0.72,0,1);
       }
-      .left.sheet-full { height: 90vh; }
-      .left.sheet-hidden { height: 44px; overflow: hidden; }
 
       .mob-handle { display: flex; }
-
-      .search-zone { flex-shrink: 0; }
-      .rec-card { flex-shrink: 0; }
-      .res-bar { flex-shrink: 0; padding: 8px 14px; }
-
+      .search-zone,.rec-card,.res-bar { flex-shrink: 0; }
       .card-list {
         flex: 1;
         overflow-y: auto;
@@ -491,7 +490,6 @@
         min-height: 0;
         padding-bottom: 40px;
       }
-
       .drawer { left: 0; max-height: 80vh; z-index: 200; }
     }
   </style>
@@ -514,9 +512,7 @@
 
 <div class="layout">
   <div class="left" id="sheet">
-    <div class="mob-handle" id="mobHandle">
-      <div class="mob-handle-bar"></div>
-    </div>
+    <div class="mob-handle" id="mobHandle"><div class="mob-handle-bar"></div></div>
     <div class="search-zone">
       <div class="search-row">
         <div class="search-field">
@@ -878,30 +874,44 @@ function renderCards(){
 
 function clearOv(){ovs.forEach(o=>o.setMap(null));ovs=[];}
 
-function markerContent(p, isSelected){
+// SVG 아이콘 (이모지 대신 → PC 깨짐 없음)
+function svgIcon(type){
+  if(type==='cafe') return `<svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M2 21h18v-2H2v2M20 8c.55 0 1-.45 1-1s-.45-1-1-1h-1V4H3v5c0 3.57 2.96 6.47 6.5 6.95V17H7v2h8v-2h-2.5v-1.05C16.04 15.47 19 12.57 19 9V6h1v2h1M5 9V6h12v3c0 2.76-2.24 5-5 5s-5-2.24-5-5z"/></svg>`;
+  return `<svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z"/></svg>`;
+}
+
+function markerHtml(p, isSel){
   const pay=isPayco(p), cafe=p.category_name&&p.category_name.includes("카페");
-  const bg = isSelected ? "#1B64DA" : pay ? "#F04452" : cafe ? "#6D4C41" : "#3182F6";
-  const border = isSelected ? "3px solid #fff" : "2px solid rgba(255,255,255,0.85)";
-  const scale = isSelected ? "scale(1.18)" : "scale(1)";
-  const zIdx = isSelected ? "z-index:10;" : "";
-  const icon = cafe ? "☕" : "🍽";
+  const bg = isSel ? "#1B64DA" : pay ? "#F04452" : cafe ? "#6D4C41" : "#3182F6";
   const zoom = map.getLevel();
-  // 줌 3이하: 이름 라벨 / 줌 4이상: 핀만
+  const name = p.place_name;
+  const icon = svgIcon(cafe?'cafe':'food');
+
   if(zoom <= 3){
-    return `<div onclick="pick('${p.id}')" style="${zIdx}background:${bg};color:white;border-radius:999px;padding:5px 11px;font-size:11px;font-weight:700;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,0.22);letter-spacing:-0.2px;border:${border};transform:${scale};transition:transform 0.15s;">${icon} ${p.place_name}</div>`;
+    // 이름 라벨
+    const sel_style = isSel ? "transform:scale(1.12);box-shadow:0 3px 14px rgba(0,0,0,0.28);" : "";
+    return `<div onclick="pick('${p.id}')" style="background:${bg};color:white;border-radius:999px;padding:5px 11px 5px 8px;font-size:11px;font-weight:700;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.2);letter-spacing:-0.2px;display:flex;align-items:center;gap:5px;${sel_style}">${icon}${name}</div>`;
   } else {
-    return `<div onclick="pick('${p.id}')" title="${p.place_name}" style="${zIdx}width:30px;height:30px;background:${bg};border-radius:50% 50% 50% 0;transform:rotate(-45deg) ${scale};display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.25);border:${border};transition:transform 0.15s;"><span style="transform:rotate(45deg);font-size:12px;display:block;">${icon}</span></div>`;
+    // 핀 마커 (겹침 없음)
+    const size = isSel ? "34px" : "28px";
+    return `<div onclick="pick('${p.id}')" title="${name}" style="width:${size};height:${size};background:${bg};border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.25);border:2.5px solid white;"><span style="transform:rotate(45deg);display:flex;align-items:center;justify-content:center;">${icon}</span></div>`;
   }
 }
 
 function renderOv(){
   clearOv();
-  filtered.forEach(p=>{
-    const isSel = sel && sel.id === p.id;
+  // 선택된 항목은 맨 마지막에 그려서 위에 오게
+  const sorted = [...filtered].sort((a,b)=>{
+    const as = sel&&sel.id===a.id ? 1 : 0;
+    const bs = sel&&sel.id===b.id ? 1 : 0;
+    return as - bs;
+  });
+  sorted.forEach(p=>{
+    const isSel = sel&&sel.id===p.id;
     const o=new kakao.maps.CustomOverlay({
       position:new kakao.maps.LatLng(p.y,p.x),
-      content: markerContent(p, isSel),
-      yAnchor: map.getLevel() <= 3 ? 1.5 : 1.1,
+      content: markerHtml(p, isSel),
+      yAnchor: map.getLevel()<=3 ? 1.5 : 1.1,
       zIndex: isSel ? 10 : 1
     });
     o.setMap(map);ovs.push(o);
@@ -915,12 +925,11 @@ function pick(id){
   const card=document.getElementById(`c-${id}`);
   if(card){card.classList.add("on");card.scrollIntoView({behavior:"smooth",block:"nearest"});}
   map.panTo(new kakao.maps.LatLng(p.y,p.x));
-  renderOv(); // 선택 마커 강조 업데이트
+  renderOv(); // 선택 마커 강조
   openDrawer(p);
-  // 모바일: 시트 올리기
+  // 모바일: 시트가 숨겨져 있으면 기본 높이로 복원
   if(window.innerWidth<=768){
-    const s=document.getElementById("sheet");
-    if(s&&s.classList.contains("sheet-hidden")) s.classList.remove("sheet-hidden");
+    sheetSetState('default');
   }
 }
 
@@ -1029,44 +1038,64 @@ function doSearch(){
   next();
 }
 
-// 줌 변경 시 마커 재렌더 (이름/핀 전환)
-kakao.maps.event.addListener(map, 'zoom_changed', ()=>renderOv());
+document.getElementById("sInput").addEventListener("keydown",e=>{if(e.key==="Enter")doSearch();});
 
-// ── 모바일 바텀시트 3단계 ──
+// 줌 변경 시 마커 재렌더 (이름 ↔ 핀 전환)
+kakao.maps.event.addListener(map,'zoom_changed',()=>renderOv());
+
+// ── 모바일 바텀시트 ──────────────────────────────────
 (function(){
-  const STATES = ['default','full','hidden'];
-  let stateIdx = 0;
+  if(window.innerWidth > 768) return;
+
   const sheet = document.getElementById('sheet');
   const handle = document.getElementById('mobHandle');
-  if(!sheet||!handle) return;
+  if(!sheet || !handle) return;
 
-  function applyState(){
-    sheet.classList.remove('sheet-full','sheet-hidden');
-    if(STATES[stateIdx]==='full') sheet.classList.add('sheet-full');
-    if(STATES[stateIdx]==='hidden') sheet.classList.add('sheet-hidden');
-  }
+  const HEIGHTS = { hidden: 44, default: Math.round(window.innerHeight * 0.46), full: Math.round(window.innerHeight * 0.90) };
+  let curState = 'default';
 
+  window.sheetSetState = function(state){
+    curState = state;
+    sheet.classList.add('sheet-animating');
+    sheet.style.height = HEIGHTS[state] + 'px';
+    setTimeout(()=>sheet.classList.remove('sheet-animating'), 340);
+  };
+
+  // 초기 높이 설정
+  sheet.style.height = HEIGHTS.default + 'px';
+
+  // 탭(클릭) 상태 순환: default → full → hidden → default
   handle.addEventListener('click', ()=>{
-    stateIdx = (stateIdx+1) % STATES.length;
-    applyState();
+    const next = curState==='default' ? 'full' : curState==='full' ? 'hidden' : 'default';
+    sheetSetState(next);
   });
 
   // 터치 스와이프
-  let startY=0, startH=0;
-  handle.addEventListener('touchstart', e=>{ startY=e.touches[0].clientY; startH=sheet.offsetHeight; }, {passive:true});
+  let tStartY = 0, tStartH = 0, dragging = false;
+
+  handle.addEventListener('touchstart', e=>{
+    tStartY = e.touches[0].clientY;
+    tStartH = sheet.offsetHeight;
+    dragging = true;
+    sheet.classList.remove('sheet-animating');
+  }, {passive:true});
+
+  handle.addEventListener('touchmove', e=>{
+    if(!dragging) return;
+    const dy = tStartY - e.touches[0].clientY;
+    const newH = Math.max(HEIGHTS.hidden, Math.min(HEIGHTS.full, tStartH + dy));
+    sheet.style.height = newH + 'px';
+  }, {passive:true});
+
   handle.addEventListener('touchend', e=>{
-    const dy = startY - e.changedTouches[0].clientY;
-    if(dy > 40){ // 위로 스와이프
-      stateIdx = STATES.indexOf('full');
-    } else if(dy < -40){ // 아래로 스와이프
-      if(STATES[stateIdx]==='full') stateIdx=STATES.indexOf('default');
-      else stateIdx=STATES.indexOf('hidden');
-    }
-    applyState();
+    if(!dragging) return;
+    dragging = false;
+    const dy = tStartY - e.changedTouches[0].clientY;
+    if(dy > 60) sheetSetState('full');
+    else if(dy < -60) sheetSetState(curState==='full' ? 'default' : 'hidden');
+    else sheetSetState(curState); // 원위치
   }, {passive:true});
 })();
-
-document.getElementById("sInput").addEventListener("keydown",e=>{if(e.key==="Enter")doSearch();});
 
 document.getElementById("paycoBtn").addEventListener("click",function(){
   pOn=!pOn;this.classList.toggle("active",pOn);filter();closeDrawer();
