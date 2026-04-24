@@ -419,78 +419,82 @@
     ::-webkit-scrollbar { width:4px; }
     ::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
 
-    /* 바텀시트 핸들 */
-    .mob-handle {
+    /* ── 모바일 탭 버튼 ── */
+    .mob-tabs {
       display: none;
-      justify-content: center;
-      padding: 12px 0 8px;
-      cursor: pointer;
-      flex-shrink: 0;
-      user-select: none;
-      -webkit-user-select: none;
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      z-index: 400;
+      background: var(--white);
+      border-top: 1px solid var(--border);
+      padding: 8px 12px 20px;
+      gap: 8px;
+      box-shadow: 0 -2px 12px rgba(0,0,0,0.08);
     }
-    .mob-handle-bar {
-      width: 40px; height: 4px;
-      background: #D1D5DB; border-radius: 2px;
+    .mob-tab {
+      flex: 1; padding: 10px 6px;
+      border: none; border-radius: 12px;
+      font-family: inherit; font-size: 12px; font-weight: 700;
+      cursor: pointer; transition: all 0.15s;
+      background: var(--bg); color: var(--text-secondary);
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
     }
+    .mob-tab.on { background: var(--blue); color: white; }
+    .mob-tab-icon { font-size: 18px; line-height: 1; }
 
     @media (max-width:768px) {
       /* 검색 버튼 */
       .search-go {
-        padding: 0 14px;
-        font-size: 13px;
-        height: 40px;
-        white-space: nowrap;
-        flex-shrink: 0;
+        padding: 0 14px; font-size: 13px;
+        height: 40px; white-space: nowrap; flex-shrink: 0;
       }
       .search-row { gap: 6px; }
       .search-field input { font-size: 13px; }
 
       /* 레이아웃: 지도 풀스크린 */
       .layout {
-        display: block;
-        position: relative;
+        display: block; position: relative;
         height: calc(100vh - 60px);
       }
       .layout > div:last-child {
         position: absolute !important;
-        inset: 0;
-        height: 100% !important;
-        overflow: hidden;
+        inset: 0; height: 100% !important; overflow: hidden;
       }
-      /* 현 지도 검색 버튼: 바텀시트 위에 보이게 z-index 높임 */
+
+      /* 현 지도 검색 버튼 */
       #reSearchBtn { z-index: 160 !important; }
 
-      /* 바텀시트 */
+      /* 바텀시트: CSS height로만 제어 */
       .left {
         position: absolute;
-        bottom: 0; left: 0; right: 0;
+        bottom: 68px; left: 0; right: 0;
         z-index: 150;
         background: var(--white);
         border-radius: 20px 20px 0 0;
         box-shadow: 0 -4px 24px rgba(0,0,0,0.13);
         border-right: none;
-        display: flex;
-        flex-direction: column;
+        display: flex; flex-direction: column;
         overflow: hidden;
-        height: 46vh;
-        /* 트랜지션 없음 - 스와이프 중 부드럽게 */
-        will-change: height;
+        height: 50vh;
+        transition: height 0.3s cubic-bezier(0.32,0.72,0,1),
+                    opacity 0.3s ease;
       }
-      .left.sheet-animating {
-        transition: height 0.32s cubic-bezier(0.32,0.72,0,1);
-      }
+      /* 상태: 절반 */
+      .left.s-half  { height: 50vh; opacity: 1; pointer-events: auto; }
+      /* 상태: 전체 */
+      .left.s-full  { height: calc(100vh - 128px); opacity: 1; pointer-events: auto; }
+      /* 상태: 숨김 */
+      .left.s-hidden { height: 0; opacity: 0; pointer-events: none; }
 
-      .mob-handle { display: flex; }
       .search-zone,.rec-card,.res-bar { flex-shrink: 0; }
       .card-list {
-        flex: 1;
-        overflow-y: auto;
+        flex: 1; overflow-y: auto;
         -webkit-overflow-scrolling: touch;
-        min-height: 0;
-        padding-bottom: 40px;
+        min-height: 0; padding-bottom: 20px;
       }
-      .drawer { left: 0; max-height: 80vh; z-index: 200; }
+
+      .mob-tabs { display: flex; }
+      .drawer { left: 0; max-height: 80vh; z-index: 300; }
     }
   </style>
 </head>
@@ -512,7 +516,6 @@
 
 <div class="layout">
   <div class="left" id="sheet">
-    <div class="mob-handle" id="mobHandle"><div class="mob-handle-bar"></div></div>
     <div class="search-zone">
       <div class="search-row">
         <div class="search-field">
@@ -601,6 +604,19 @@
       <div id="dContent"></div>
     </div>
   </div>
+</div>
+
+<!-- 모바일 탭바 -->
+<div class="mob-tabs" id="mobTabs">
+  <button class="mob-tab on" id="tabHalf" onclick="sheetTab('half')">
+    <span class="mob-tab-icon">☰</span>목록 (절반)
+  </button>
+  <button class="mob-tab" id="tabFull" onclick="sheetTab('full')">
+    <span class="mob-tab-icon">↑</span>목록 전체
+  </button>
+  <button class="mob-tab" id="tabMap" onclick="sheetTab('map')">
+    <span class="mob-tab-icon">🗺</span>지도만
+  </button>
 </div>
 
 <script>
@@ -1043,70 +1059,39 @@ document.getElementById("sInput").addEventListener("keydown",e=>{if(e.key==="Ent
 // 줌 변경 시 마커 재렌더 (이름 ↔ 핀 전환)
 kakao.maps.event.addListener(map,'zoom_changed',()=>renderOv());
 
-// ── 모바일 바텀시트 ──────────────────────────────────
-// innerWidth 대신 CSS 미디어쿼리 매칭으로 판단 (더 정확)
-function initSheet(){
-  const isMobile = window.matchMedia('(max-width:768px)').matches;
-  if(!isMobile) return;
-
+// ── 모바일 탭 버튼으로 시트 제어 ──────────────────────
+function sheetTab(mode){
   const sheet = document.getElementById('sheet');
-  const handle = document.getElementById('mobHandle');
-  if(!sheet || !handle){ console.warn('sheet or handle not found'); return; }
-
-  const vh = window.innerHeight;
-  const HEIGHTS = { hidden: 44, default: Math.round(vh * 0.46), full: Math.round(vh * 0.90) };
-  let curState = 'default';
-
-  function animate(state){
-    curState = state;
-    sheet.style.transition = 'height 0.32s cubic-bezier(0.32,0.72,0,1)';
-    sheet.style.height = HEIGHTS[state] + 'px';
-    setTimeout(()=>{ sheet.style.transition = ''; }, 340);
-  }
-
-  window.sheetSetState = animate;
-
-  // 초기 높이
-  sheet.style.height = HEIGHTS.default + 'px';
-
-  // 클릭 순환: default → full → hidden → default
-  handle.addEventListener('click', ()=>{
-    const next = curState==='default' ? 'full' : curState==='full' ? 'hidden' : 'default';
-    animate(next);
+  if(!sheet) return;
+  // 탭 버튼 활성화
+  ['tabHalf','tabFull','tabMap'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.classList.remove('on');
   });
-
-  // 스와이프
-  let tStartY = 0, tStartH = 0, isDragging = false;
-
-  handle.addEventListener('touchstart', e=>{
-    tStartY = e.touches[0].clientY;
-    tStartH = sheet.offsetHeight;
-    isDragging = true;
-    sheet.style.transition = 'none';
-  }, {passive:true});
-
-  window.addEventListener('touchmove', e=>{
-    if(!isDragging) return;
-    const dy = tStartY - e.touches[0].clientY;
-    const newH = Math.max(HEIGHTS.hidden, Math.min(HEIGHTS.full, tStartH + dy));
-    sheet.style.height = newH + 'px';
-  }, {passive:true});
-
-  window.addEventListener('touchend', e=>{
-    if(!isDragging) return;
-    isDragging = false;
-    const dy = tStartY - e.changedTouches[0].clientY;
-    if(dy > 50) animate('full');
-    else if(dy < -50) animate(curState==='full' ? 'default' : 'hidden');
-    else animate(curState);
-  }, {passive:true});
+  if(mode==='half'){
+    sheet.className = 'left s-half';
+    const el = document.getElementById('tabHalf');
+    if(el) el.classList.add('on');
+  } else if(mode==='full'){
+    sheet.className = 'left s-full';
+    const el = document.getElementById('tabFull');
+    if(el) el.classList.add('on');
+  } else {
+    sheet.className = 'left s-hidden';
+    const el = document.getElementById('tabMap');
+    if(el) el.classList.add('on');
+  }
 }
 
-// DOM 완전히 로드된 후 실행
-if(document.readyState === 'loading'){
-  document.addEventListener('DOMContentLoaded', initSheet);
-} else {
-  initSheet();
+// 식당 선택 시 절반 보기로 자동 전환
+window.sheetSetState = function(state){
+  if(state==='default') sheetTab('half');
+};
+
+// 초기 상태
+if(window.matchMedia('(max-width:768px)').matches){
+  const sheet = document.getElementById('sheet');
+  if(sheet) sheet.className = 'left s-half';
 }
 
 document.getElementById("paycoBtn").addEventListener("click",function(){
