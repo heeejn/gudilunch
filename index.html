@@ -1044,58 +1044,70 @@ document.getElementById("sInput").addEventListener("keydown",e=>{if(e.key==="Ent
 kakao.maps.event.addListener(map,'zoom_changed',()=>renderOv());
 
 // ── 모바일 바텀시트 ──────────────────────────────────
-(function(){
-  if(window.innerWidth > 768) return;
+// innerWidth 대신 CSS 미디어쿼리 매칭으로 판단 (더 정확)
+function initSheet(){
+  const isMobile = window.matchMedia('(max-width:768px)').matches;
+  if(!isMobile) return;
 
   const sheet = document.getElementById('sheet');
   const handle = document.getElementById('mobHandle');
-  if(!sheet || !handle) return;
+  if(!sheet || !handle){ console.warn('sheet or handle not found'); return; }
 
-  const HEIGHTS = { hidden: 44, default: Math.round(window.innerHeight * 0.46), full: Math.round(window.innerHeight * 0.90) };
+  const vh = window.innerHeight;
+  const HEIGHTS = { hidden: 44, default: Math.round(vh * 0.46), full: Math.round(vh * 0.90) };
   let curState = 'default';
 
-  window.sheetSetState = function(state){
+  function animate(state){
     curState = state;
-    sheet.classList.add('sheet-animating');
+    sheet.style.transition = 'height 0.32s cubic-bezier(0.32,0.72,0,1)';
     sheet.style.height = HEIGHTS[state] + 'px';
-    setTimeout(()=>sheet.classList.remove('sheet-animating'), 340);
-  };
+    setTimeout(()=>{ sheet.style.transition = ''; }, 340);
+  }
 
-  // 초기 높이 설정
+  window.sheetSetState = animate;
+
+  // 초기 높이
   sheet.style.height = HEIGHTS.default + 'px';
 
-  // 탭(클릭) 상태 순환: default → full → hidden → default
+  // 클릭 순환: default → full → hidden → default
   handle.addEventListener('click', ()=>{
     const next = curState==='default' ? 'full' : curState==='full' ? 'hidden' : 'default';
-    sheetSetState(next);
+    animate(next);
   });
 
-  // 터치 스와이프
-  let tStartY = 0, tStartH = 0, dragging = false;
+  // 스와이프
+  let tStartY = 0, tStartH = 0, isDragging = false;
 
   handle.addEventListener('touchstart', e=>{
     tStartY = e.touches[0].clientY;
     tStartH = sheet.offsetHeight;
-    dragging = true;
-    sheet.classList.remove('sheet-animating');
+    isDragging = true;
+    sheet.style.transition = 'none';
   }, {passive:true});
 
-  handle.addEventListener('touchmove', e=>{
-    if(!dragging) return;
+  window.addEventListener('touchmove', e=>{
+    if(!isDragging) return;
     const dy = tStartY - e.touches[0].clientY;
     const newH = Math.max(HEIGHTS.hidden, Math.min(HEIGHTS.full, tStartH + dy));
     sheet.style.height = newH + 'px';
   }, {passive:true});
 
-  handle.addEventListener('touchend', e=>{
-    if(!dragging) return;
-    dragging = false;
+  window.addEventListener('touchend', e=>{
+    if(!isDragging) return;
+    isDragging = false;
     const dy = tStartY - e.changedTouches[0].clientY;
-    if(dy > 60) sheetSetState('full');
-    else if(dy < -60) sheetSetState(curState==='full' ? 'default' : 'hidden');
-    else sheetSetState(curState); // 원위치
+    if(dy > 50) animate('full');
+    else if(dy < -50) animate(curState==='full' ? 'default' : 'hidden');
+    else animate(curState);
   }, {passive:true});
-})();
+}
+
+// DOM 완전히 로드된 후 실행
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', initSheet);
+} else {
+  initSheet();
+}
 
 document.getElementById("paycoBtn").addEventListener("click",function(){
   pOn=!pOn;this.classList.toggle("active",pOn);filter();closeDrawer();
