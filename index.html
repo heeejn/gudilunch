@@ -420,8 +420,31 @@
     ::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
 
     @media (max-width:768px) {
-      .layout { grid-template-columns:1fr; grid-template-rows:45vh 1fr; }
-      .drawer { left:0; max-height:75vh; }
+      body { overflow: hidden; }
+      .layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: 45vh 1fr;
+        height: calc(100vh - 60px);
+        overflow: hidden;
+      }
+      .left {
+        order: 2;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        height: 100%;
+      }
+      .card-list {
+        flex: 1;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 40px;
+        min-height: 0;
+      }
+      .search-zone { flex-shrink: 0; }
+      .rec-card { flex-shrink: 0; }
+      .res-bar { flex-shrink: 0; }
+      .drawer { left: 0; max-height: 80vh; }
     }
   </style>
 </head>
@@ -811,8 +834,8 @@ function renderOv(){
     const bg=pay?"#F04452":cafe?"#8B5E3C":"#3182F6";
     const o=new kakao.maps.CustomOverlay({
       position:new kakao.maps.LatLng(p.y,p.x),
-      content:`<div onclick="pick('${p.id}')" style="background:${bg};color:white;border-radius:999px;padding:5px 12px;font-size:11px;font-weight:700;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.18);letter-spacing:-0.2px;">${cafe?"☕":"🍽"} ${p.place_name}</div>`,
-      yAnchor:1.4
+      content:`<div onclick="pick('${p.id}')" title="${p.place_name}" style="width:32px;height:32px;background:${bg};border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.22);border:2px solid white;"><span style="transform:rotate(45deg);font-size:13px;display:block;">${cafe?"☕":"🍽"}</span></div>`,
+      yAnchor:1.1
     });
     o.setMap(map);ovs.push(o);
   });
