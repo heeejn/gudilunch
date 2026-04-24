@@ -419,46 +419,47 @@
     ::-webkit-scrollbar { width:4px; }
     ::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
 
-    /* 바텀시트 핸들 */
-    .mob-handle {
+    /* FAB 플로팅 버튼 */
+    .fab {
       display: none;
-      justify-content: center;
-      padding: 12px 0 8px;
+      position: fixed;
+      right: 16px;
+      z-index: 250;
+      width: 52px; height: 52px;
+      border-radius: 50%;
+      border: none;
+      background: var(--blue);
+      color: white;
+      font-size: 22px;
+      font-weight: 700;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.25);
       cursor: pointer;
-      flex-shrink: 0;
-      user-select: none;
-      -webkit-user-select: none;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s, bottom 0.3s cubic-bezier(0.32,0.72,0,1);
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
     }
-    .mob-handle-bar {
-      width: 40px; height: 4px;
-      background: #D1D5DB; border-radius: 2px;
-    }
+    .fab:active { transform: scale(0.92); }
 
     @media (max-width:768px) {
       /* 검색 버튼 */
       .search-go {
-        padding: 0 14px;
-        font-size: 13px;
-        height: 40px;
-        white-space: nowrap;
-        flex-shrink: 0;
+        padding: 0 14px; font-size: 13px;
+        height: 40px; white-space: nowrap; flex-shrink: 0;
       }
       .search-row { gap: 6px; }
       .search-field input { font-size: 13px; }
 
       /* 레이아웃: 지도 풀스크린 */
       .layout {
-        display: block;
-        position: relative;
+        display: block; position: relative;
         height: calc(100vh - 60px);
       }
       .layout > div:last-child {
         position: absolute !important;
-        inset: 0;
-        height: 100% !important;
-        overflow: hidden;
+        inset: 0; height: 100% !important; overflow: hidden;
       }
-      /* 현 지도 검색 버튼: 바텀시트 위에 보이게 z-index 높임 */
       #reSearchBtn { z-index: 160 !important; }
 
       /* 바텀시트 */
@@ -470,27 +471,19 @@
         border-radius: 20px 20px 0 0;
         box-shadow: 0 -4px 24px rgba(0,0,0,0.13);
         border-right: none;
-        display: flex;
-        flex-direction: column;
+        display: flex; flex-direction: column;
         overflow: hidden;
-        height: 46vh;
-        /* 트랜지션 없음 - 스와이프 중 부드럽게 */
-        will-change: height;
-      }
-      .left.sheet-animating {
-        transition: height 0.32s cubic-bezier(0.32,0.72,0,1);
+        transition: height 0.3s cubic-bezier(0.32,0.72,0,1);
       }
 
-      .mob-handle { display: flex; }
       .search-zone,.rec-card,.res-bar { flex-shrink: 0; }
       .card-list {
-        flex: 1;
-        overflow-y: auto;
+        flex: 1; overflow-y: auto;
         -webkit-overflow-scrolling: touch;
-        min-height: 0;
-        padding-bottom: 40px;
+        min-height: 0; padding-bottom: 20px;
       }
-      .drawer { left: 0; max-height: 80vh; z-index: 200; }
+      .fab { display: flex; }
+      .drawer { left: 0; max-height: 80vh; z-index: 300; }
     }
     /* 터치 딜레이 제거 */
     * { touch-action: manipulation; }
@@ -515,7 +508,6 @@
 
 <div class="layout">
   <div class="left" id="sheet">
-    <div class="mob-handle" id="mobHandle"><div class="mob-handle-bar"></div></div>
     <div class="search-zone">
       <div class="search-row">
         <div class="search-field">
@@ -605,6 +597,9 @@
     </div>
   </div>
 </div>
+
+<!-- FAB 버튼 -->
+<button class="fab" id="fabBtn" onclick="fabTap()">☰</button>
 
 <script>
 const NHN_ADDR = "서울특별시 구로구 디지털로26길 72";
@@ -1075,59 +1070,54 @@ document.getElementById("sInput").addEventListener("keydown",e=>{if(e.key==="Ent
 // 줌 변경 시 마커 재렌더 (이름 ↔ 핀 전환)
 kakao.maps.event.addListener(map,'zoom_changed',()=>renderOv());
 
-// ── 모바일 바텀시트 ──────────────────────────────────
-(function(){
-  if(window.innerWidth > 768) return;
+// ── FAB 버튼으로 시트 제어 ──────────────────────────────
+var _fabState = 'half';
+var _fabSheet = null;
+var _fabBtn = null;
 
-  const sheet = document.getElementById('sheet');
-  const handle = document.getElementById('mobHandle');
-  if(!sheet || !handle) return;
+function _fabInit(){
+  _fabSheet = document.getElementById('sheet');
+  _fabBtn = document.getElementById('fabBtn');
+  if(!_fabSheet || !_fabBtn) return;
 
-  const HEIGHTS = { hidden: 44, default: Math.round(window.innerHeight * 0.46), full: Math.round(window.innerHeight * 0.90) };
-  let curState = 'default';
+  // 3단계 높이
+  var vh = window.innerHeight;
+  var H = { half: Math.round(vh*0.5), full: Math.round(vh*0.88), hidden: 0 };
+  var ICONS = { half: '↑', full: '🗺', hidden: '☰' };
+  var LABELS = { half: '전체보기', full: '지도만', hidden: '목록보기' };
 
-  window.sheetSetState = function(state){
-    curState = state;
-    sheet.classList.add('sheet-animating');
-    sheet.style.height = HEIGHTS[state] + 'px';
-    setTimeout(()=>sheet.classList.remove('sheet-animating'), 340);
+  function applyState(state){
+    _fabState = state;
+    _fabSheet.style.height = H[state] + 'px';
+    _fabSheet.style.overflow = 'hidden';
+    // FAB 위치: 시트 바로 위 16px
+    var sheetH = state === 'hidden' ? 0 : H[state];
+    _fabBtn.style.bottom = (sheetH + 16) + 'px';
+    _fabBtn.textContent = ICONS[state];
+    _fabBtn.title = LABELS[state];
+  }
+
+  // 클릭: half → full → hidden → half 순환
+  window.fabTap = function(){
+    var next = _fabState==='half' ? 'full' : _fabState==='full' ? 'hidden' : 'half';
+    applyState(next);
   };
 
-  // 초기 높이 설정
-  sheet.style.height = HEIGHTS.default + 'px';
+  // 식당 클릭 시 숨김이면 half로 복원
+  window.sheetSetState = function(s){
+    if(s==='default' && _fabState==='hidden') applyState('half');
+  };
 
-  // 탭(클릭) 상태 순환: default → full → hidden → default
-  handle.addEventListener('click', ()=>{
-    const next = curState==='default' ? 'full' : curState==='full' ? 'hidden' : 'default';
-    sheetSetState(next);
-  });
+  // 초기 설정
+  applyState('half');
+}
 
-  // 터치 스와이프
-  let tStartY = 0, tStartH = 0, dragging = false;
-
-  handle.addEventListener('touchstart', e=>{
-    tStartY = e.touches[0].clientY;
-    tStartH = sheet.offsetHeight;
-    dragging = true;
-    sheet.classList.remove('sheet-animating');
-  }, {passive:true});
-
-  handle.addEventListener('touchmove', e=>{
-    if(!dragging) return;
-    const dy = tStartY - e.touches[0].clientY;
-    const newH = Math.max(HEIGHTS.hidden, Math.min(HEIGHTS.full, tStartH + dy));
-    sheet.style.height = newH + 'px';
-  }, {passive:true});
-
-  handle.addEventListener('touchend', e=>{
-    if(!dragging) return;
-    dragging = false;
-    const dy = tStartY - e.changedTouches[0].clientY;
-    if(dy > 60) sheetSetState('full');
-    else if(dy < -60) sheetSetState(curState==='full' ? 'default' : 'hidden');
-    else sheetSetState(curState); // 원위치
-  }, {passive:true});
-})();
+// DOM 로드 완료 후 실행
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', _fabInit);
+} else {
+  _fabInit();
+}
 
 document.getElementById("paycoBtn").addEventListener("click",function(){
   pOn=!pOn;this.classList.toggle("active",pOn);filter();closeDrawer();
