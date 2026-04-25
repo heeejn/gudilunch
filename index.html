@@ -705,7 +705,7 @@
 
     <!-- 현 지도에서 검색 버튼 -->
     <div id="reSearchBtn" style="
-      display:none;
+      display:block;
       position:absolute;
       top:16px;
       left:50%;
@@ -801,11 +801,12 @@ async function addReviewToDB(placeId, placeName, author, star, text, date) {
   if (!uRevs[placeId]) uRevs[placeId] = [];
   const newRev = data[0] || { author, star, text, date };
   uRevs[placeId].push({ id: newRev.id, author, star, text, date });
+  return newRev;
 }
 async function deleteReviewFromDB(placeId, reviewId) {
   await sbFetch(`reviews?id=eq.${reviewId}`, { method: "DELETE" });
   if (uRevs[placeId]) {
-    uRevs[placeId] = uRevs[placeId].filter(r => r.id !== reviewId);
+    uRevs[placeId] = uRevs[placeId].filter(r => String(r.id) !== String(reviewId));
   }
 }
 
@@ -951,7 +952,6 @@ function autoNick() {
   return NICKNAMES[Math.floor(Math.random()*NICKNAMES.length)] + Math.floor(Math.random()*99+1);
 }
 function reSearchHere(){
-  document.getElementById("reSearchBtn").style.display = "none";
   const center = map.getCenter();
   CX = center.getLat();
   CY = center.getLng();
@@ -960,26 +960,66 @@ function reSearchHere(){
   load();
 }
 
+const MAX_RESULTS = 100;
+function searchPoints(lat, lng){
+  const latStep = 0.0108;
+  const lngStep = 0.0136;
+  return [
+    [lat, lng],
+    [lat + latStep, lng], [lat - latStep, lng],
+    [lat, lng + lngStep], [lat, lng - lngStep],
+    [lat + latStep, lng + lngStep], [lat + latStep, lng - lngStep],
+    [lat - latStep, lng + lngStep], [lat - latStep, lng - lngStep]
+  ].map(function(v){ return new kakao.maps.LatLng(v[0], v[1]); });
+}
+function distanceMeters(lat1, lng1, lat2, lng2){
+  const R = 6371000;
+  const toRad = d => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+    Math.sin(dLng/2) * Math.sin(dLng/2);
+  return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+}
+function normalizePlaces(list){
+  const seen = new Set();
+  return list.filter(function(p){
+    if(seen.has(p.id)) return false;
+    seen.add(p.id);
+    p.distance = distanceMeters(CX, CY, parseFloat(p.y), parseFloat(p.x));
+    return true;
+  }).sort(function(a,b){
+    return Number(a.distance || 0) - Number(b.distance || 0);
+  }).slice(0, MAX_RESULTS);
+}
+
 function load(){
   if(busy)return;
   busy=true;spin(true);places=[];clearOv();
-  const loc=new kakao.maps.LatLng(CX,CY);
-  let pg=1;
-  const MAX_PAGE=5; // 카카오 최대 45개 × 페이지네이션
-  function next(){
-    const opts={location:loc,radius:2000,sort:kakao.maps.services.SortBy.DISTANCE,page:pg,size:15};
-    const cb=(data,status,pag)=>{
-      if(status===kakao.maps.services.Status.OK){
-        places=places.concat(data);
-        if(pag.hasNextPage && pg < MAX_PAGE){ pg++; next(); }else done();
-      }else done();
-    };
-    kw?ps.keywordSearch(cat+" 구로디지털단지",cb,opts):ps.categorySearch(cat,cb,opts);
+  const points = searchPoints(CX, CY);
+  let pointIdx = 0;
+  const MAX_PAGE=3; // 카카오 장소 API는 한 검색 지점당 최대 45개
+  function searchPoint(){
+    if(pointIdx >= points.length){ done(); return; }
+    const loc = points[pointIdx++];
+    let pg=1;
+    function nextPage(){
+      const opts={location:loc,radius:1600,sort:kakao.maps.services.SortBy.DISTANCE,page:pg,size:15};
+      const cb=(data,status,pag)=>{
+        if(status===kakao.maps.services.Status.OK){
+          places=places.concat(data);
+          if(pag.hasNextPage && pg < MAX_PAGE){ pg++; nextPage(); }
+          else searchPoint();
+        }else searchPoint();
+      };
+      kw?ps.keywordSearch(cat+" 구로디지털단지",cb,opts):ps.categorySearch(cat,cb,opts);
+    }
+    nextPage();
   }
-  next();
+  searchPoint();
   function done(){
-    const seen=new Set();
-    places=places.filter(p=>{if(seen.has(p.id))return false;seen.add(p.id);return true;});
+    places=normalizePlaces(places);
     busy=false;filter();spin(false);
     if(document.getElementById("recContent").style.display !== "block") {
       getRecommendation();
@@ -1091,12 +1131,12 @@ function openDrawer(p){
   const addr=p.road_address_name||p.address_name||"";
   const pOn2=uPayco[p.id]===true;
 
-  // 내 세션 닉네임 (submitRv에서 쓴 autoNick 기반)
+  const myReviewIds = JSON.parse(localStorage.getItem('myReviewIds')||'[]').map(String);
   const myNicks = JSON.parse(sessionStorage.getItem('myNicks')||'[]');
   const rvHtml=rv.map(r=>{
-    const isMine = myNicks.includes(r.author);
+    const isMine = (r.id && myReviewIds.includes(String(r.id))) || myNicks.includes(r.author);
     const delBtn = isMine && r.id
-      ? `<button onclick="deleteRv('${p.id}',${r.id})" style="background:none;border:none;color:#ccc;font-size:11px;cursor:pointer;padding:0 2px;float:right;" title="삭제">✕</button>`
+      ? `<button onclick="deleteRv('${p.id}','${r.id}')" style="background:none;border:none;color:#ccc;font-size:11px;cursor:pointer;padding:0 2px;float:right;" title="삭제">✕</button>`
       : '';
     return `<div class="rv-card">
       <div class="rv-top">${delBtn}<span class="rv-who">👤 ${r.author}</span><span class="rv-when">${r.date}</span></div>
@@ -1170,7 +1210,12 @@ async function submitRv(pid){
   const placeName = sel ? sel.place_name : "";
   const btn = document.querySelector(".w-submit");
   if(btn){ btn.textContent = "저장 중..."; btn.disabled = true; }
-  await addReviewToDB(pid, placeName, name, star, text, date);
+  const newRev = await addReviewToDB(pid, placeName, name, star, text, date);
+  if(newRev && newRev.id){
+    const myReviewIds = JSON.parse(localStorage.getItem('myReviewIds')||'[]').map(String);
+    if(!myReviewIds.includes(String(newRev.id))) myReviewIds.push(String(newRev.id));
+    localStorage.setItem('myReviewIds', JSON.stringify(myReviewIds));
+  }
   // 내 닉네임 세션에 저장 (삭제 버튼 표시용)
   const myNicks = JSON.parse(sessionStorage.getItem('myNicks')||'[]');
   if(!myNicks.includes(name)) myNicks.push(name);
@@ -1183,6 +1228,9 @@ async function submitRv(pid){
 async function deleteRv(placeId, reviewId){
   if(!confirm("이 리뷰를 삭제할까요?")) return;
   await deleteReviewFromDB(placeId, reviewId);
+  const myReviewIds = JSON.parse(localStorage.getItem('myReviewIds')||'[]').map(String)
+    .filter(function(id){ return id !== String(reviewId); });
+  localStorage.setItem('myReviewIds', JSON.stringify(myReviewIds));
   const p = filtered.find(x=>x.id===placeId);
   if(p) openDrawer(p);
   renderCards();
