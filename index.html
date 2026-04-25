@@ -49,7 +49,7 @@
       border-bottom: 1px solid var(--border);
     }
 
-    .logo-area { display:flex; align-items:center; gap:10px; }
+    .logo-area { display:flex; align-items:center; gap:10px; cursor:pointer; }
     .logo-dot {
       width: 36px; height: 36px;
       background: var(--blue);
@@ -440,7 +440,7 @@
       #map { width: 100% !important; height: 100% !important; }
       #reSearchBtn { z-index: 300 !important; top: 14px !important; }
       /* AI 추천 카드: 검색 버튼보다 아래 */
-      #mobRecFloat { top: 60px !important; }
+      #mobRecFloat { top: 76px !important; }
 
       /* 모바일 요소 표시 */
       #mobHeader {
@@ -481,7 +481,11 @@
       #mobPanel.open { transform: translateX(0); }
 
       /* 드로어 */
-      .drawer { left: 0 !important; max-height: 88vh !important; z-index: 900 !important; }
+      .drawer {
+        left: 0 !important;
+        max-height: calc(100dvh - 112px) !important;
+        z-index: 900 !important;
+      }
     }
     * { touch-action: manipulation; }
     button, a, [onclick] { -webkit-tap-highlight-color: transparent; }
@@ -558,7 +562,7 @@
 
 <!-- ══ 모바일 헤더 ══ -->
 <div id="mobHeader">
-  <div class="mob-logo">😋 구디 <em>점메추</em></div>
+  <div class="mob-logo" onclick="goHome()">😋 구디 <em>점메추</em></div>
   <div class="mob-sw">
     <input class="mob-si" id="mobSI" type="text" placeholder="가게명, 메뉴 검색">
     <button class="mob-sb" onclick="mobSearch()">검색</button>
@@ -610,7 +614,7 @@
 </div>
 
 <header>
-  <div class="logo-area">
+  <div class="logo-area" onclick="goHome()">
     <div class="logo-dot" style="font-size:20px;">😋</div>
     <div>
       <div class="logo-title">구디 점메추</div>
@@ -819,6 +823,9 @@ window.onload=function(){
   ps=new kakao.maps.services.Places();
 
   lastCenter = new kakao.maps.LatLng(CX, CY);
+
+  // 줌 변경 시 마커 재렌더 (이름 ↔ 핀 전환)
+  kakao.maps.event.addListener(map,'zoom_changed',()=>renderOv());
 
   // DB에서 공유 데이터 먼저 로드
   Promise.all([loadPaycoFromDB(), loadReviewsFromDB()]).then(() => {
@@ -1200,11 +1207,41 @@ function doSearch(){
 
 document.getElementById("sInput").addEventListener("keydown",e=>{if(e.key==="Enter")doSearch();});
 
-// 줌 변경 시 마커 재렌더 (이름 ↔ 핀 전환)
-kakao.maps.event.addListener(map,'zoom_changed',()=>renderOv());
-
 // ── sheetSetState 호환 ──
 window.sheetSetState = function(){};
+
+function goHome(){
+  closeDrawer();
+  mobClosePanel();
+  sel = null;
+  cat = "FD6";
+  kw = false;
+  pOn = false;
+  CX = 37.4808;
+  CY = 126.8937;
+  document.getElementById("sInput").value = "";
+  var mobSI = document.getElementById("mobSI");
+  if(mobSI) mobSI.value = "";
+  document.querySelectorAll(".chip").forEach(function(x){
+    x.classList.toggle("on", x.dataset.cat === "FD6");
+  });
+  document.querySelectorAll(".mob-chip").forEach(function(x){
+    x.classList.toggle("on", x.dataset.cat === "FD6");
+  });
+  var pcBtn = document.getElementById("paycoBtn");
+  if(pcBtn) pcBtn.classList.remove("active");
+  var mb = document.getElementById("mobPB");
+  if(mb) mb.classList.remove("on");
+  var rec = document.getElementById("mobRecFloat");
+  if(rec) rec.classList.remove("hidden");
+  if(map){
+    var home = new kakao.maps.LatLng(CX, CY);
+    map.setCenter(home);
+    map.setLevel(4);
+    lastCenter = home;
+  }
+  load();
+}
 
 // ── pickRandom ──
 function pickRandom(){
