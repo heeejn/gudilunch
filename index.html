@@ -828,6 +828,9 @@ let map,ps,ovs=[],places=[],filtered=[],sel=null,star=0,pOn=false,cat="FD6",kw=f
 
 let lastCenter = null;
 let searchBounds = null;
+let markerGroups = {};
+let returnToMobListOnDrawerClose = false;
+let savedMobListScrollTop = 0;
 
 window.onload=function(){
   if(typeof kakao === 'undefined' || typeof kakao.maps === 'undefined') {
@@ -976,51 +979,22 @@ function setReSearchState(state){
 }
 function reSearchHere(){
   if(busy) return;
-  setReSearchState("searching");
   const center = map.getCenter();
   CX = center.getLat();
   CY = center.getLng();
   lastCenter = center;
   searchBounds = map.getBounds();
   closeDrawer();
-  load(true);
+  load();
 }
 
-const MAX_RESULTS = 100;
+const MAX_RESULTS = 45;
 function getSearchBounds(){
   if(map && searchBounds) return searchBounds;
   if(map) return map.getBounds();
   return new kakao.maps.LatLngBounds(
     new kakao.maps.LatLng(CX - 0.01, CY - 0.01),
     new kakao.maps.LatLng(CX + 0.01, CY + 0.01)
-  );
-}
-function splitBounds(bounds){
-  const sw = bounds.getSouthWest();
-  const ne = bounds.getNorthEast();
-  const latMin = sw.getLat(), latMax = ne.getLat();
-  const lngMin = sw.getLng(), lngMax = ne.getLng();
-  const cells = [];
-  for(let row=0; row<2; row++){
-    for(let col=0; col<2; col++){
-      const sLat = latMin + (latMax - latMin) * row / 2;
-      const nLat = latMin + (latMax - latMin) * (row + 1) / 2;
-      const wLng = lngMin + (lngMax - lngMin) * col / 2;
-      const eLng = lngMin + (lngMax - lngMin) * (col + 1) / 2;
-      cells.push(new kakao.maps.LatLngBounds(
-        new kakao.maps.LatLng(sLat, wLng),
-        new kakao.maps.LatLng(nLat, eLng)
-      ));
-    }
-  }
-  return [bounds].concat(cells);
-}
-function boundsCenter(bounds){
-  const sw = bounds.getSouthWest();
-  const ne = bounds.getNorthEast();
-  return new kakao.maps.LatLng(
-    (sw.getLat() + ne.getLat()) / 2,
-    (sw.getLng() + ne.getLng()) / 2
   );
 }
 function distanceMeters(lat1, lng1, lat2, lng2){
@@ -1046,40 +1020,28 @@ function normalizePlaces(list){
     return Number(a.distance || 0) - Number(b.distance || 0);
   }).slice(0, MAX_RESULTS);
 }
-
-function searchPlacesInBounds(bounds, maxPage){
-  return new Promise(function(resolve){
-    const loc = boundsCenter(bounds);
-    let pg = 1;
-    const found = [];
-    function nextPage(){
-      const opts={bounds:bounds,location:loc,sort:kakao.maps.services.SortBy.DISTANCE,page:pg,size:15};
-      const cb=(data,status,pag)=>{
-        if(status===kakao.maps.services.Status.OK){
-          found.push.apply(found, data);
-          if(pag.hasNextPage && pg < maxPage){ pg++; nextPage(); }
-          else resolve(found);
-        }else resolve(found);
-      };
-      kw?ps.keywordSearch(cat+" 구로디지털단지",cb,opts):ps.categorySearch(cat,cb,opts);
-    }
-    nextPage();
-  });
-}
-
-async function load(deepSearch=false){
+function load(){
   if(busy)return;
   busy=true;spin(true);places=[];clearOv();
   if(!searchBounds) searchBounds = getSearchBounds();
-  const boundsList = deepSearch ? splitBounds(searchBounds) : [searchBounds];
-  const maxPage = deepSearch ? 2 : 1;
-  try {
-    const chunks = await Promise.all(boundsList.map(function(bounds){
-      return searchPlacesInBounds(bounds, maxPage);
-    }));
-    places = chunks.reduce(function(all, chunk){ return all.concat(chunk); }, []);
+  const bounds = searchBounds;
+  const loc = map.getCenter();
+  let pg = 1;
+  const MAX_PAGE = 3;
+  function nextPage(){
+    const opts={bounds:bounds,location:loc,sort:kakao.maps.services.SortBy.DISTANCE,page:pg,size:15};
+    const cb=(data,status,pag)=>{
+      if(status===kakao.maps.services.Status.OK){
+        places=places.concat(data);
+        if(pag.hasNextPage && pg < MAX_PAGE){ pg++; nextPage(); }
+        else done();
+      }else done();
+    };
+    kw?ps.keywordSearch(cat+" 구로디지털단지",cb,opts):ps.categorySearch(cat,cb,opts);
+  }
+  nextPage();
+  function done(){
     places=normalizePlaces(places);
-  } finally {
     busy=false;filter();spin(false);
     setReSearchState("current");
     if(document.getElementById("recContent").style.display !== "block") {
@@ -1130,6 +1092,9 @@ function svgIcon(type){
 }
 
 function markerHtml(p, isSel){
+  if(p.__groupId){
+    return `<div onclick="event.stopPropagation();openMarkerGroup('${p.__groupId}')" ontouchstart="event.stopPropagation()" style="min-width:44px;height:34px;background:#191F28;color:white;border-radius:999px;padding:0 12px;font-size:12px;font-weight:800;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;cursor:pointer;box-shadow:0 3px 14px rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center;border:2px solid white;">+${p.__items.length}</div>`;
+  }
   const pay=isPayco(p), cafe=p.category_name&&p.category_name.includes("카페");
   const bg = isSel ? "#1B64DA" : pay ? "#F04452" : cafe ? "#6D4C41" : "#3182F6";
   const zoom = map.getLevel();
@@ -1147,30 +1112,70 @@ function markerHtml(p, isSel){
   }
 }
 
+function markerItems(){
+  markerGroups = {};
+  const groups = new Map();
+  filtered.forEach(function(p){
+    const key = `${Number(p.y).toFixed(5)}_${Number(p.x).toFixed(5)}`;
+    if(!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(p);
+  });
+  const items = [];
+  groups.forEach(function(list, key){
+    if(list.length === 1){
+      items.push(list[0]);
+      return;
+    }
+    const groupId = "g" + key.replace(/[^0-9]/g, "");
+    markerGroups[groupId] = list;
+    const first = list[0];
+    items.push({
+      ...first,
+      id: groupId,
+      __groupId: groupId,
+      __items: list,
+      place_name: `${list.length}개 식당`
+    });
+  });
+  return items;
+}
+
+function openMarkerGroup(groupId){
+  const list = markerGroups[groupId] || [];
+  if(!list.length) return;
+  const rows = list.map(function(p){
+    const c = p.category_name ? p.category_name.split(">").pop().trim() : "";
+    const d = p.distance ? `${p.distance}m` : "";
+    return `<button onclick="pick('${p.id}')" style="width:100%;text-align:left;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:12px 13px;margin-bottom:8px;font-family:'Noto Sans KR',sans-serif;cursor:pointer;">
+      <div style="font-size:14px;font-weight:800;color:var(--text-primary);margin-bottom:3px;">${p.place_name}</div>
+      <div style="font-size:12px;color:var(--text-tertiary);">${c}${d ? " · " + d : ""}</div>
+    </button>`;
+  }).join("");
+  document.getElementById("dContent").innerHTML=`
+    <div class="d-close-row"><button class="d-close" onclick="closeDrawer(true)">✕</button></div>
+    <div class="d-name">이 위치의 식당 ${list.length}곳</div>
+    <div class="d-sub">보고 싶은 식당을 선택해주세요</div>
+    <div style="margin-top:12px;">${rows}</div>`;
+  document.getElementById("drawer").classList.add("on");
+}
+
 function renderOv(){
   clearOv();
-  const zoom = map.getLevel();
-  const slots = new Map();
   // 선택된 항목은 맨 마지막에 그려서 위에 오게
-  const sorted = [...filtered].sort((a,b)=>{
+  const sorted = markerItems().sort((a,b)=>{
     const as = sel&&sel.id===a.id ? 1 : 0;
     const bs = sel&&sel.id===b.id ? 1 : 0;
     return as - bs;
   });
   sorted.forEach(p=>{
     const isSel = sel&&sel.id===p.id;
-    const key = `${Number(p.y).toFixed(5)}_${Number(p.x).toFixed(5)}`;
-    const slot = slots.get(key) || 0;
-    slots.set(key, slot + 1);
-    const xAnchor = zoom <= 3 ? 0.5 : 0.5 + ((slot % 3) - 1) * 0.45;
-    const yAnchor = zoom <= 3 ? 1.5 + slot * 0.62 : 1.1 + Math.floor(slot / 3) * 0.62 + (slot % 3) * 0.12;
     const o=new kakao.maps.CustomOverlay({
       position:new kakao.maps.LatLng(p.y,p.x),
       content: markerHtml(p, isSel),
       clickable: true,
-      xAnchor: xAnchor,
-      yAnchor: yAnchor,
-      zIndex: isSel ? 100 : 1 + slot
+      xAnchor: 0.5,
+      yAnchor: map.getLevel()<=3 ? 1.5 : 1.1,
+      zIndex: isSel || p.__groupId ? 100 : 1
     });
     o.setMap(map);ovs.push(o);
   });
@@ -1215,7 +1220,7 @@ function openDrawer(p){
   }).join("");
 
   document.getElementById("dContent").innerHTML=`
-    <div class="d-close-row"><button class="d-close" onclick="closeDrawer()">✕</button></div>
+    <div class="d-close-row"><button class="d-close" onclick="closeDrawer(true)">✕</button></div>
     <div class="d-name">${p.place_name}</div>
     <div class="d-sub">${c}${addr?" · "+addr:""}</div>
     <div class="d-stats">
@@ -1251,9 +1256,15 @@ function openDrawer(p){
   document.getElementById("drawer").classList.add("on");
 }
 
-function closeDrawer(){
+function closeDrawer(returnToList=false){
   document.getElementById("drawer").classList.remove("on");
   sel=null;document.querySelectorAll(".place-card").forEach(c=>c.classList.remove("on"));
+  if(returnToList && returnToMobListOnDrawerClose && window.innerWidth<=768){
+    returnToMobListOnDrawerClose = false;
+    mobOpenPanel(savedMobListScrollTop);
+  } else if(!returnToList) {
+    returnToMobListOnDrawerClose = false;
+  }
 }
 
 async function tPayco(pid){
@@ -1446,10 +1457,16 @@ function mobTogglePayco(){
   mobUpdateCnt();
 }
 
-function mobOpenPanel(){
+function mobOpenPanel(scrollTop){
   mobRenderList();
   document.getElementById('mobPanel').classList.add('open');
   document.getElementById('mobPanelDim').classList.add('on');
+  if(typeof scrollTop === 'number'){
+    requestAnimationFrame(function(){
+      var list = document.getElementById('mobPList');
+      if(list) list.scrollTop = scrollTop;
+    });
+  }
 }
 function mobClosePanel(){
   document.getElementById('mobPanel').classList.remove('open');
@@ -1486,6 +1503,8 @@ function mobRenderList(){
   list.innerHTML = html;
   list.querySelectorAll('.mob-pc').forEach(function(el){
     el.addEventListener('click', function(){
+      savedMobListScrollTop = list.scrollTop;
+      returnToMobListOnDrawerClose = true;
       mobClosePanel(); pick(this.dataset.pid);
     });
   });
