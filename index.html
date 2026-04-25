@@ -438,7 +438,9 @@
         height: 100% !important; overflow: hidden !important;
       }
       #map { width: 100% !important; height: 100% !important; }
-      #reSearchBtn { z-index: 200 !important; }
+      #reSearchBtn { z-index: 300 !important; top: 14px !important; }
+      /* AI 추천 카드: 검색 버튼보다 아래 */
+      #mobRecFloat { top: 60px !important; }
 
       /* 모바일 요소 표시 */
       #mobHeader {
@@ -455,7 +457,7 @@
       }
       #mobRecFloat {
         display: block !important;
-        position: absolute; left: 12px; right: 12px; top: 56px; z-index: 100;
+        position: absolute; left: 12px; right: 12px; top: 14px; z-index: 100;
         background: rgba(255,255,255,.96); border-radius: 14px;
         border: 1px solid #C5DCFF; padding: 11px 13px;
         box-shadow: 0 2px 16px rgba(0,0,0,.08);
@@ -1215,13 +1217,20 @@ function pickRandom(){
   pick(pool[Math.floor(Math.random() * pool.length)].id);
 }
 
-// ── PC 페이코/칩 이벤트 ──
+// ── 공통 카운트 업데이트 ──
+function mobUpdateCnt(){
+  var cnt = filtered.length;
+  ['mobCnt','mobPCnt','mobFCnt'].forEach(function(id){
+    var el = document.getElementById(id); if(el) el.textContent = cnt;
+  });
+}
+
+// ── PC 페이코 버튼 ──
 document.getElementById("paycoBtn").addEventListener("click", function(){
   pOn = !pOn;
   this.classList.toggle("active", pOn);
   filter();
   closeDrawer();
-  // 모바일 동기화
   var mb = document.getElementById('mobPB');
   if(mb) mb.classList.toggle('on', pOn);
   mobUpdateCnt();
@@ -1250,7 +1259,6 @@ document.addEventListener("DOMContentLoaded", function(){
       if(busy) return;
       document.querySelectorAll(".mob-chip").forEach(function(x){ x.classList.remove("on"); });
       this.classList.add("on");
-      // PC 칩도 동기화
       document.querySelectorAll(".chip").forEach(function(x){
         x.classList.toggle("on", x.dataset.cat === this.dataset.cat);
       }.bind(this));
@@ -1266,9 +1274,9 @@ document.addEventListener("DOMContentLoaded", function(){
 
 // ── 모바일 함수들 ──
 function mobSearch(){
-  var q = (document.getElementById('mobSI') || {}).value || '';
+  var q = document.getElementById('mobSI') ? document.getElementById('mobSI').value.trim() : '';
   var si = document.getElementById('sInput');
-  if(si) si.value = q.trim();
+  if(si) si.value = q;
   doSearch();
 }
 
@@ -1277,14 +1285,9 @@ function mobTogglePayco(){
   document.getElementById('mobPB').classList.toggle('on', pOn);
   var pcBtn = document.getElementById('paycoBtn');
   if(pcBtn) pcBtn.classList.toggle('active', pOn);
-  filter(); closeDrawer();
+  filter();
+  closeDrawer();
   mobUpdateCnt();
-}
-
-function mobUpdateCnt(){
-  var cnt = filtered.length;
-  var el = document.getElementById('mobCnt');
-  if(el) el.textContent = cnt;
 }
 
 function mobOpenPanel(){
@@ -1298,10 +1301,7 @@ function mobClosePanel(){
 }
 
 function mobRenderList(){
-  var cnt = filtered.length;
-  var el = document.getElementById('mobCnt'); if(el) el.textContent = cnt;
-  var pc = document.getElementById('mobPCnt'); if(pc) pc.textContent = cnt;
-  var fc = document.getElementById('mobFCnt'); if(fc) fc.textContent = cnt;
+  mobUpdateCnt();
   var list = document.getElementById('mobPList');
   if(!list) return;
   if(!filtered.length){
@@ -1317,76 +1317,71 @@ function mobRenderList(){
     var catStr = p.category_name ? p.category_name.split('>').pop().trim() : '';
     var d = p.distance ? p.distance + 'm' : '';
     var active = (sel && sel.id === p.id) ? ' active' : '';
-    var pid = p.id;
-    html += '<div class="mob-pc' + active + '" data-pid="' + pid + '">';
+    html += '<div class="mob-pc' + active + '" data-pid="' + p.id + '">';
     html += '<div class="mob-pctop"><span class="mob-pcname">' + p.place_name + '</span>';
     if(pay) html += '<span class="mob-pcpayco">PAYCO</span>';
-    html += '</div>';
-    html += '<div class="mob-pccat">' + catStr + '</div>';
+    html += '</div><div class="mob-pccat">' + catStr + '</div>';
     html += '<div class="mob-pcbtm">';
     if(d) html += '<span class="mob-pcdist">📍 ' + d + '</span>';
     if(avg) html += '<span class="mob-pcrat">★' + avg + '</span>';
-    html += '<button class="mob-pcnav" data-pid="' + pid + '">지도→</button>';
+    html += '<button class="mob-pcnav" data-pid="' + p.id + '">지도→</button>';
     html += '</div></div>';
   }
   list.innerHTML = html;
-
-  // 이벤트: 카드 클릭 → 선택
   list.querySelectorAll('.mob-pc').forEach(function(el){
     el.addEventListener('click', function(){
-      var id = this.dataset.pid;
-      mobClosePanel();
-      pick(id);
+      mobClosePanel(); pick(this.dataset.pid);
     });
   });
-  // 이벤트: 지도 버튼
   list.querySelectorAll('.mob-pcnav').forEach(function(el){
     el.addEventListener('click', function(e){
       e.stopPropagation();
-      var id = this.dataset.pid;
-      var p = filtered.find(function(x){ return x.id === id; });
+      var p = filtered.find(function(x){ return x.id === this.dataset.pid; }.bind(this));
       if(p) window.open('https://map.naver.com/v5/search/' + encodeURIComponent(p.place_name), '_blank');
     });
   });
 }
 
-// filter 후 카운트 업데이트
-var _origFilter = filter;
-filter = function(){
-  _origFilter();
+// ── filter 후 모바일 카운트 갱신 ──
+// 주의: filter 함수 재정의 금지 → renderCards 후에 훅 추가
+var _origRenderCards = renderCards;
+renderCards = function(){
+  _origRenderCards();
   mobUpdateCnt();
-  if(document.getElementById('mobPanel').classList.contains('open')) mobRenderList();
+  if(document.getElementById('mobPanel') &&
+     document.getElementById('mobPanel').classList.contains('open')) {
+    mobRenderList();
+  }
 };
 
-// pick 후 패널 닫기
+// ── pick: 모바일 패널 닫기 포함 ──
 var _origPick = pick;
 pick = function(id){
   mobClosePanel();
   _origPick(id);
 };
 
-// AI 추천
+// ── AI 추천 ──
 async function mobGetRec(){
-  var loads = ['mobRLoad','mobPRLoad'];
-  var conts = ['mobRCont','mobPRCont'];
-  loads.forEach(function(id){ var el=document.getElementById(id); if(el) el.style.display='flex'; });
-  conts.forEach(function(id){ var el=document.getElementById(id); if(el) el.style.display='none'; });
-
+  ['mobRLoad','mobPRLoad'].forEach(function(id){
+    var el = document.getElementById(id); if(el) el.style.display = 'flex';
+  });
+  ['mobRCont','mobPRCont'].forEach(function(id){
+    var el = document.getElementById(id); if(el) el.style.display = 'none';
+  });
   var foodPool = places.filter(function(p){
     var c = p.category_name || '';
     return !c.includes('카페') && !c.includes('커피') && !c.includes('베이커리');
   });
   var pool = foodPool.length ? foodPool : places;
   if(!pool.length) return;
-
   var picked = pool[Math.floor(Math.random() * pool.length)];
   var dist = picked.distance ? picked.distance + 'm' : '근처';
   var catStr = picked.category_name ? picked.category_name.split('>').pop().trim() : '';
   var title = "오늘은 <em>'" + picked.place_name + "'</em> 어때요?";
   var reason = "맛있는 점심 먹고 오후에 힘내는 거예요! 💪😋";
-
   try{
-    var res = await fetch('https://api.anthropic.com/v1/messages', {
+    var res = await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
         model:'claude-sonnet-4-20250514', max_tokens:150,
@@ -1397,16 +1392,21 @@ async function mobGetRec(){
     var json = JSON.parse(data.content[0].text.replace(/```json|```/g,'').trim());
     reason = json.reason;
   } catch(e){}
-
-  var tis = ['mobRTi','mobPRTi'];
-  var res2 = ['mobRRe','mobPRRe'];
-  tis.forEach(function(id){ var el=document.getElementById(id); if(el) el.innerHTML=title; });
-  res2.forEach(function(id){ var el=document.getElementById(id); if(el) el.textContent=reason; });
-  loads.forEach(function(id){ var el=document.getElementById(id); if(el) el.style.display='none'; });
-  conts.forEach(function(id){ var el=document.getElementById(id); if(el) el.style.display='block'; });
+  ['mobRTi','mobPRTi'].forEach(function(id){
+    var el = document.getElementById(id); if(el) el.innerHTML = title;
+  });
+  ['mobRRe','mobPRRe'].forEach(function(id){
+    var el = document.getElementById(id); if(el) el.textContent = reason;
+  });
+  ['mobRLoad','mobPRLoad'].forEach(function(id){
+    var el = document.getElementById(id); if(el) el.style.display = 'none';
+  });
+  ['mobRCont','mobPRCont'].forEach(function(id){
+    var el = document.getElementById(id); if(el) el.style.display = 'block';
+  });
 }
 
-// 지도 로드 후 모바일 추천 실행
+// 지도 로드 후 모바일 추천
 var _mobTimer = setInterval(function(){
   if(places.length > 0){
     clearInterval(_mobTimer);
