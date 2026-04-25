@@ -1038,11 +1038,11 @@ function markerHtml(p, isSel){
   if(zoom <= 3){
     // 이름 라벨
     const sel_style = isSel ? "transform:scale(1.12);box-shadow:0 3px 14px rgba(0,0,0,0.28);" : "";
-    return `<div onclick="pick('${p.id}')" style="background:${bg};color:white;border-radius:999px;padding:5px 11px 5px 8px;font-size:11px;font-weight:700;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.2);letter-spacing:-0.2px;display:flex;align-items:center;gap:5px;${sel_style}">${icon}${name}</div>`;
+    return `<div onclick="event.stopPropagation();pick('${p.id}')" ontouchstart="event.stopPropagation()" style="background:${bg};color:white;border-radius:999px;padding:5px 11px 5px 8px;font-size:11px;font-weight:700;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.2);letter-spacing:-0.2px;display:flex;align-items:center;gap:5px;${sel_style}">${icon}${name}</div>`;
   } else {
     // 핀 마커 (겹침 없음)
     const size = isSel ? "34px" : "28px";
-    return `<div onclick="pick('${p.id}')" title="${name}" style="width:${size};height:${size};background:${bg};border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.25);border:2.5px solid white;"><span style="transform:rotate(45deg);display:flex;align-items:center;justify-content:center;">${icon}</span></div>`;
+    return `<div onclick="event.stopPropagation();pick('${p.id}')" ontouchstart="event.stopPropagation()" title="${name}" style="width:${size};height:${size};background:${bg};border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.25);border:2.5px solid white;"><span style="transform:rotate(45deg);display:flex;align-items:center;justify-content:center;">${icon}</span></div>`;
   }
 }
 
@@ -1059,6 +1059,7 @@ function renderOv(){
     const o=new kakao.maps.CustomOverlay({
       position:new kakao.maps.LatLng(p.y,p.x),
       content: markerHtml(p, isSel),
+      clickable: true,
       yAnchor: map.getLevel()<=3 ? 1.5 : 1.1,
       zIndex: isSel ? 10 : 1
     });
