@@ -419,19 +419,26 @@
     ::-webkit-scrollbar { width:4px; }
     ::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
 
-    /* 바텀시트 핸들 */
-    .mob-handle {
-      display: none;
-      justify-content: center;
-      padding: 12px 0 8px;
+    /* ── 지도 위 고정 핸들바 (카카오 지도와 분리) ── */
+    .map-handle {
+      display: none; /* 모바일에서만 표시 */
+      position: fixed;
+      left: 0; right: 0;
+      z-index: 600;
+      background: var(--white);
+      border-radius: 16px 16px 0 0;
+      box-shadow: 0 -3px 16px rgba(0,0,0,0.12);
+      padding: 10px 0 6px;
+      justify-content: center; align-items: center;
       cursor: pointer;
-      flex-shrink: 0;
-      user-select: none;
-      -webkit-user-select: none;
+      touch-action: none; /* 터치 독점 */
+      -webkit-tap-highlight-color: transparent;
+      transition: bottom 0.3s cubic-bezier(0.32,0.72,0,1);
     }
-    .mob-handle-bar {
+    .map-handle-bar {
       width: 40px; height: 4px;
-      background: #D1D5DB; border-radius: 2px;
+      background: #D0D0D0; border-radius: 2px;
+      pointer-events: none;
     }
 
     @media (max-width:768px) {
@@ -453,74 +460,36 @@
         inset: 0; height: 100% !important; overflow: hidden;
       }
 
-      /* 현 지도 검색: 바텀시트 위 */
-      #reSearchBtn { z-index: 200 !important; }
+      /* 현 지도 검색 버튼 */
+      #reSearchBtn { z-index: 300 !important; }
 
-      /* 바텀시트: CSS에서 초기 절반 높이 */
+      /* 바텀시트: 핸들바 위에 위치, 핸들바 높이(32px)만큼 아래 시작 */
       .left {
-        position: absolute;
-        bottom: 0; left: 0; right: 0;
-        z-index: 150;
+        position: fixed;
+        left: 0; right: 0; bottom: 0;
+        z-index: 500;
         background: var(--white);
-        border-radius: 20px 20px 0 0;
-        box-shadow: 0 -4px 24px rgba(0,0,0,0.13);
         border-right: none;
         display: flex; flex-direction: column;
         overflow: hidden;
+        /* 초기 높이: CSS 변수로 JS가 직접 제어 */
         height: 48vh;
         transition: height 0.3s cubic-bezier(0.32,0.72,0,1);
       }
-
-      /* 상태 클래스 */
-      .left.s-full   { height: 88vh; }
-      .left.s-hidden { height: 0px; }
-
-      /* 핸들바 */
-      .mob-handle { display: flex !important; }
 
       .search-zone,.rec-card,.res-bar { flex-shrink: 0; }
       .card-list {
         flex: 1; overflow-y: auto;
         -webkit-overflow-scrolling: touch;
-        min-height: 0; padding-bottom: 80px;
+        min-height: 0; padding-bottom: 20px;
       }
 
-      /* FAB 버튼 */
-      .mob-fab {
-        display: flex !important;
-        position: fixed;
-        right: 16px; bottom: 16px;
-        z-index: 400;
-        width: 52px; height: 52px;
-        border-radius: 50%; border: none;
-        background: var(--blue); color: white;
-        font-size: 18px; font-weight: 700;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.25);
-        cursor: pointer;
-        align-items: center; justify-content: center;
-        -webkit-tap-highlight-color: transparent;
-        touch-action: manipulation;
-        transition: bottom 0.3s cubic-bezier(0.32,0.72,0,1);
-      }
+      /* 드로어: 시트+핸들 위 */
+      .drawer { left: 0; max-height: 88vh; z-index: 700; }
 
-      .drawer { left: 0; max-height: 85vh; z-index: 500; }
+      /* 지도 위 핸들바 표시 */
+      .map-handle { display: flex; }
     }
-
-    /* 모바일 핸들바 */
-    .mob-handle {
-      display: none;
-      justify-content: center; align-items: center;
-      padding: 12px 0 8px; flex-shrink: 0;
-      cursor: pointer; user-select: none;
-      -webkit-user-select: none;
-    }
-    .mob-handle-bar {
-      width: 36px; height: 4px;
-      background: #D1D5DB; border-radius: 2px;
-    }
-
-    /* FAB: 기본 숨김 */
-    .mob-fab { display: none; }
 
     /* 터치 딜레이 제거 */
     * { touch-action: manipulation; }
@@ -546,7 +515,6 @@
 
 <div class="layout">
   <div class="left" id="sheet">
-    <div class="mob-handle" id="mobHandle" onclick="sheetCycle()"><div class="mob-handle-bar"></div></div>
     <div class="search-zone">
       <div class="search-row">
         <div class="search-field">
@@ -637,8 +605,10 @@
   </div>
 </div>
 
-<!-- 모바일 FAB -->
-<button class="mob-fab" id="mobFab" onclick="sheetCycle()">☰</button>
+<!-- 지도 위 고정 핸들바 (카카오 지도와 완전 분리) -->
+<div class="map-handle" id="mapHandle">
+  <div class="map-handle-bar"></div>
+</div>
 
 <script>
 const NHN_ADDR = "서울특별시 구로구 디지털로26길 72";
@@ -1051,10 +1021,15 @@ function closeDrawer(){
 
 async function tPayco(pid){
   const newVal = !uPayco[pid];
+  const btn = event && event.currentTarget;
+  if(btn) { btn.disabled = true; }
   await setPaycoDB(pid, newVal);
+  if(btn) { btn.disabled = false; btn.classList.toggle("on", newVal); }
   const t=document.getElementById("pToggle");
   if(t) t.classList.toggle("on", newVal);
-  renderCards();renderOv();
+  renderCards(); renderOv();
+  // 드로어 새로고침 (페이코 배지 업데이트)
+  if(sel) openDrawer(sel);
 }
 
 function setStar(n){
@@ -1113,58 +1088,81 @@ document.getElementById("sInput").addEventListener("keydown",e=>{if(e.key==="Ent
 // 줌 변경 시 마커 재렌더 (이름 ↔ 핀 전환)
 kakao.maps.event.addListener(map,'zoom_changed',()=>renderOv());
 
-// ── 모바일 시트 제어 ──────────────────────────────────
-var mobSheet = null;
-var mobFab   = null;
-var mobState = 'default'; // default | full | hidden
+// ── 모바일: 지도 위 고정 핸들바로 시트 제어 ────────────
+(function(){
+  if(!window.matchMedia('(max-width:768px)').matches) return;
 
-var SHEET_STATES = ['default','full','hidden'];
-var SHEET_ICONS  = { default:'↑', full:'🗺', hidden:'☰' };
-var SHEET_LABELS = { default:'전체 보기', full:'지도만 보기', hidden:'목록 보기' };
+  var sheet  = document.getElementById('sheet');
+  var handle = document.getElementById('mapHandle');
+  if(!sheet || !handle) return;
 
-function sheetApply(state){
-  if(!mobSheet || !mobFab) return;
-  mobState = state;
-
-  // CSS 클래스로 높이 제어 (transition 적용됨)
-  mobSheet.classList.remove('s-full','s-hidden');
-  if(state === 'full')   mobSheet.classList.add('s-full');
-  if(state === 'hidden') mobSheet.classList.add('s-hidden');
-
-  // FAB 위치: 시트 위로
-  var sheetH = mobSheet.offsetHeight;
-  // offsetHeight는 transition 전 값이므로 CSS 값으로 직접 계산
   var vh = window.innerHeight;
-  var targetH = state==='full' ? Math.round(vh*0.88)
-              : state==='hidden' ? 0
-              : Math.round(vh*0.48);
-  mobFab.style.bottom = (targetH + 16) + 'px';
-  mobFab.textContent  = SHEET_ICONS[state];
-  mobFab.title        = SHEET_LABELS[state];
-}
+  // 3단계 높이 (px)
+  var H = {
+    half:   Math.round(vh * 0.48),
+    full:   Math.round(vh * 0.88),
+    hidden: 0
+  };
+  var state = 'half';
 
-// 핸들/FAB 클릭 시 순환: default → full → hidden → default
-window.sheetCycle = function(){
-  var next = mobState==='default' ? 'full'
-           : mobState==='full'    ? 'hidden'
-           : 'default';
-  sheetApply(next);
-};
+  function applyState(s, animate){
+    state = s;
+    if(animate !== false) {
+      sheet.style.transition = 'height 0.3s cubic-bezier(0.32,0.72,0,1)';
+    } else {
+      sheet.style.transition = 'none';
+    }
+    sheet.style.height = H[s] + 'px';
+    // 핸들바 위치: 시트 위에 딱 붙음
+    handle.style.bottom = H[s] + 'px';
+    // 핸들바 모양으로 상태 표시
+    handle.querySelector('.map-handle-bar').style.background =
+      s === 'hidden' ? '#3182F6' : '#D0D0D0';
+  }
 
-// 식당 클릭 시 숨겨진 상태면 기본으로 복원
-window.sheetSetState = function(s){
-  if(!window.matchMedia('(max-width:768px)').matches) return;
-  if(s==='default' && mobState==='hidden') sheetApply('default');
-};
+  // 외부에서 호출 가능
+  window.sheetSetState = function(s){
+    if(s === 'default' && state === 'hidden') applyState('half');
+  };
 
-// 모바일에서만 초기화
-(function initMob(){
-  if(!window.matchMedia('(max-width:768px)').matches) return;
-  mobSheet = document.getElementById('sheet');
-  mobFab   = document.getElementById('mobFab');
-  if(!mobSheet || !mobFab) return;
-  // 초기 상태: 절반 보기
-  sheetApply('default');
+  // 탭: half → full → hidden → half
+  handle.addEventListener('click', function(){
+    var next = state==='half' ? 'full' : state==='full' ? 'hidden' : 'half';
+    applyState(next);
+  }, {passive: false});
+
+  // 스와이프: 핸들바가 지도 위에 fixed로 있어서 카카오 지도와 분리됨
+  var startY = 0, startH = 0, dragging = false;
+
+  handle.addEventListener('touchstart', function(e){
+    startY   = e.touches[0].clientY;
+    startH   = sheet.offsetHeight;
+    dragging = true;
+    sheet.style.transition = 'none';
+    e.preventDefault(); // 지도로 전파 차단
+  }, {passive: false});
+
+  window.addEventListener('touchmove', function(e){
+    if(!dragging) return;
+    var dy   = startY - e.touches[0].clientY;
+    var newH = Math.max(H.hidden, Math.min(H.full, startH + dy));
+    sheet.style.height  = newH + 'px';
+    handle.style.bottom = newH + 'px';
+  }, {passive: true});
+
+  window.addEventListener('touchend', function(e){
+    if(!dragging) return;
+    dragging = false;
+    var dy = startY - e.changedTouches[0].clientY;
+    var next;
+    if(dy > 60)       next = state==='hidden' ? 'half' : 'full';
+    else if(dy < -60) next = state==='full' ? 'half' : 'hidden';
+    else              next = state; // 제자리
+    applyState(next);
+  }, {passive: true});
+
+  // 초기 상태: 절반
+  applyState('half', false);
 })();
 
 document.getElementById("paycoBtn").addEventListener("click",function(){
