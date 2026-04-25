@@ -257,8 +257,8 @@
       color: var(--text-primary);
     }
     .research-btn.searching {
-      background: #00C471;
-      border-color: #00C471;
+      background: var(--blue);
+      border-color: var(--blue);
       color: white;
     }
 
@@ -972,7 +972,7 @@ function setReSearchState(state){
   if(!btn) return;
   btn.classList.toggle("current", state === "current");
   btn.classList.toggle("searching", state === "searching");
-  btn.textContent = state === "searching" ? "🔎 검색 중..." : "🔍 현 지도에서 검색";
+  btn.textContent = "🔍 현 지도에서 검색";
 }
 function reSearchHere(){
   if(busy) return;
@@ -983,7 +983,7 @@ function reSearchHere(){
   lastCenter = center;
   searchBounds = map.getBounds();
   closeDrawer();
-  load();
+  load(true);
 }
 
 const MAX_RESULTS = 100;
@@ -1001,12 +1001,12 @@ function splitBounds(bounds){
   const latMin = sw.getLat(), latMax = ne.getLat();
   const lngMin = sw.getLng(), lngMax = ne.getLng();
   const cells = [];
-  for(let row=0; row<3; row++){
-    for(let col=0; col<3; col++){
-      const sLat = latMin + (latMax - latMin) * row / 3;
-      const nLat = latMin + (latMax - latMin) * (row + 1) / 3;
-      const wLng = lngMin + (lngMax - lngMin) * col / 3;
-      const eLng = lngMin + (lngMax - lngMin) * (col + 1) / 3;
+  for(let row=0; row<2; row++){
+    for(let col=0; col<2; col++){
+      const sLat = latMin + (latMax - latMin) * row / 2;
+      const nLat = latMin + (latMax - latMin) * (row + 1) / 2;
+      const wLng = lngMin + (lngMax - lngMin) * col / 2;
+      const eLng = lngMin + (lngMax - lngMin) * (col + 1) / 2;
       cells.push(new kakao.maps.LatLngBounds(
         new kakao.maps.LatLng(sLat, wLng),
         new kakao.maps.LatLng(nLat, eLng)
@@ -1047,34 +1047,39 @@ function normalizePlaces(list){
   }).slice(0, MAX_RESULTS);
 }
 
-function load(){
-  if(busy)return;
-  busy=true;spin(true);places=[];clearOv();
-  if(!searchBounds) searchBounds = getSearchBounds();
-  const boundsList = splitBounds(searchBounds);
-  let boundsIdx = 0;
-  const MAX_PAGE=3; // 카카오 장소 API는 한 검색 지점당 최대 45개
-  function searchNextBounds(){
-    if(boundsIdx >= boundsList.length){ done(); return; }
-    const bounds = boundsList[boundsIdx++];
+function searchPlacesInBounds(bounds, maxPage){
+  return new Promise(function(resolve){
     const loc = boundsCenter(bounds);
-    let pg=1;
+    let pg = 1;
+    const found = [];
     function nextPage(){
       const opts={bounds:bounds,location:loc,sort:kakao.maps.services.SortBy.DISTANCE,page:pg,size:15};
       const cb=(data,status,pag)=>{
         if(status===kakao.maps.services.Status.OK){
-          places=places.concat(data);
-          if(pag.hasNextPage && pg < MAX_PAGE){ pg++; nextPage(); }
-          else searchNextBounds();
-        }else searchNextBounds();
+          found.push.apply(found, data);
+          if(pag.hasNextPage && pg < maxPage){ pg++; nextPage(); }
+          else resolve(found);
+        }else resolve(found);
       };
       kw?ps.keywordSearch(cat+" 구로디지털단지",cb,opts):ps.categorySearch(cat,cb,opts);
     }
     nextPage();
-  }
-  searchNextBounds();
-  function done(){
+  });
+}
+
+async function load(deepSearch=false){
+  if(busy)return;
+  busy=true;spin(true);places=[];clearOv();
+  if(!searchBounds) searchBounds = getSearchBounds();
+  const boundsList = deepSearch ? splitBounds(searchBounds) : [searchBounds];
+  const maxPage = deepSearch ? 2 : 1;
+  try {
+    const chunks = await Promise.all(boundsList.map(function(bounds){
+      return searchPlacesInBounds(bounds, maxPage);
+    }));
+    places = chunks.reduce(function(all, chunk){ return all.concat(chunk); }, []);
     places=normalizePlaces(places);
+  } finally {
     busy=false;filter();spin(false);
     setReSearchState("current");
     if(document.getElementById("recContent").style.display !== "block") {
@@ -1144,6 +1149,8 @@ function markerHtml(p, isSel){
 
 function renderOv(){
   clearOv();
+  const zoom = map.getLevel();
+  const slots = new Map();
   // 선택된 항목은 맨 마지막에 그려서 위에 오게
   const sorted = [...filtered].sort((a,b)=>{
     const as = sel&&sel.id===a.id ? 1 : 0;
@@ -1152,12 +1159,18 @@ function renderOv(){
   });
   sorted.forEach(p=>{
     const isSel = sel&&sel.id===p.id;
+    const key = `${Number(p.y).toFixed(5)}_${Number(p.x).toFixed(5)}`;
+    const slot = slots.get(key) || 0;
+    slots.set(key, slot + 1);
+    const xAnchor = zoom <= 3 ? 0.5 : 0.5 + ((slot % 3) - 1) * 0.45;
+    const yAnchor = zoom <= 3 ? 1.5 + slot * 0.62 : 1.1 + Math.floor(slot / 3) * 0.62 + (slot % 3) * 0.12;
     const o=new kakao.maps.CustomOverlay({
       position:new kakao.maps.LatLng(p.y,p.x),
       content: markerHtml(p, isSel),
       clickable: true,
-      yAnchor: map.getLevel()<=3 ? 1.5 : 1.1,
-      zIndex: isSel ? 10 : 1
+      xAnchor: xAnchor,
+      yAnchor: yAnchor,
+      zIndex: isSel ? 100 : 1 + slot
     });
     o.setMap(map);ovs.push(o);
   });
