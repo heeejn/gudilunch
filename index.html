@@ -985,7 +985,7 @@ function reSearchHere(){
   lastCenter = center;
   searchBounds = map.getBounds();
   closeDrawer();
-  load();
+  load(true);
 }
 
 const MAX_RESULTS = 45;
@@ -995,6 +995,34 @@ function getSearchBounds(){
   return new kakao.maps.LatLngBounds(
     new kakao.maps.LatLng(CX - 0.01, CY - 0.01),
     new kakao.maps.LatLng(CX + 0.01, CY + 0.01)
+  );
+}
+function splitBounds(bounds){
+  const sw = bounds.getSouthWest();
+  const ne = bounds.getNorthEast();
+  const latMin = sw.getLat(), latMax = ne.getLat();
+  const lngMin = sw.getLng(), lngMax = ne.getLng();
+  const cells = [];
+  for(let row=0; row<2; row++){
+    for(let col=0; col<2; col++){
+      const sLat = latMin + (latMax - latMin) * row / 2;
+      const nLat = latMin + (latMax - latMin) * (row + 1) / 2;
+      const wLng = lngMin + (lngMax - lngMin) * col / 2;
+      const eLng = lngMin + (lngMax - lngMin) * (col + 1) / 2;
+      cells.push(new kakao.maps.LatLngBounds(
+        new kakao.maps.LatLng(sLat, wLng),
+        new kakao.maps.LatLng(nLat, eLng)
+      ));
+    }
+  }
+  return cells;
+}
+function boundsCenter(bounds){
+  const sw = bounds.getSouthWest();
+  const ne = bounds.getNorthEast();
+  return new kakao.maps.LatLng(
+    (sw.getLat() + ne.getLat()) / 2,
+    (sw.getLng() + ne.getLng()) / 2
   );
 }
 function distanceMeters(lat1, lng1, lat2, lng2){
@@ -1007,41 +1035,70 @@ function distanceMeters(lat1, lng1, lat2, lng2){
     Math.sin(dLng/2) * Math.sin(dLng/2);
   return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
 }
-function normalizePlaces(list){
+function normalizePlaces(list, keepOrder=false){
   const seen = new Set();
   const bounds = getSearchBounds();
-  return list.filter(function(p){
+  const out = list.filter(function(p){
     if(seen.has(p.id)) return false;
     if(!bounds.contain(new kakao.maps.LatLng(parseFloat(p.y), parseFloat(p.x)))) return false;
     seen.add(p.id);
     p.distance = distanceMeters(CX, CY, parseFloat(p.y), parseFloat(p.x));
     return true;
-  }).sort(function(a,b){
+  });
+  if(keepOrder) return out.slice(0, MAX_RESULTS);
+  return out.sort(function(a,b){
     return Number(a.distance || 0) - Number(b.distance || 0);
   }).slice(0, MAX_RESULTS);
 }
-function load(){
+function mergeEvenly(chunks){
+  const merged = [];
+  let i = 0;
+  while(merged.length < MAX_RESULTS){
+    let added = false;
+    for(let c=0; c<chunks.length && merged.length<MAX_RESULTS; c++){
+      if(chunks[c][i]){
+        merged.push(chunks[c][i]);
+        added = true;
+      }
+    }
+    if(!added) break;
+    i++;
+  }
+  return merged;
+}
+function searchPlaces(bounds, maxPage){
+  return new Promise(function(resolve){
+    const loc = boundsCenter(bounds);
+    let pg = 1;
+    const found = [];
+    function nextPage(){
+      const opts={bounds:bounds,location:loc,sort:kakao.maps.services.SortBy.DISTANCE,page:pg,size:15};
+      const cb=(data,status,pag)=>{
+        if(status===kakao.maps.services.Status.OK){
+          found.push.apply(found, data);
+          if(pag.hasNextPage && pg < maxPage){ pg++; nextPage(); }
+          else resolve(found);
+        }else resolve(found);
+      };
+      kw?ps.keywordSearch(cat+" 구로디지털단지",cb,opts):ps.categorySearch(cat,cb,opts);
+    }
+    nextPage();
+  });
+}
+async function load(gridSearch=false){
   if(busy)return;
   busy=true;spin(true);places=[];clearOv();
   if(!searchBounds) searchBounds = getSearchBounds();
-  const bounds = searchBounds;
-  const loc = map.getCenter();
-  let pg = 1;
-  const MAX_PAGE = 3;
-  function nextPage(){
-    const opts={bounds:bounds,location:loc,sort:kakao.maps.services.SortBy.DISTANCE,page:pg,size:15};
-    const cb=(data,status,pag)=>{
-      if(status===kakao.maps.services.Status.OK){
-        places=places.concat(data);
-        if(pag.hasNextPage && pg < MAX_PAGE){ pg++; nextPage(); }
-        else done();
-      }else done();
-    };
-    kw?ps.keywordSearch(cat+" 구로디지털단지",cb,opts):ps.categorySearch(cat,cb,opts);
-  }
-  nextPage();
-  function done(){
-    places=normalizePlaces(places);
+  try{
+    if(gridSearch){
+      const chunks = await Promise.all(splitBounds(searchBounds).map(function(bounds){
+        return searchPlaces(bounds, 1);
+      }));
+      places = normalizePlaces(mergeEvenly(chunks), true);
+    } else {
+      places = normalizePlaces(await searchPlaces(searchBounds, 3));
+    }
+  } finally {
     busy=false;filter();spin(false);
     setReSearchState("current");
     if(document.getElementById("recContent").style.display !== "block") {
